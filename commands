@@ -1,0 +1,91 @@
+# 1. Navigate to your project directory (replace with your actual folder path)
+cd C:\path\to\your\ProjectFolder
+
+# 2. Create the virtual environment named 'venv'
+python -m venv venv
+
+# 3. Activate the virtual environment
+# On Windows Command Prompt (CMD):
+venv\Scripts\activate.bat
+
+# On Windows PowerShell:
+.\venv\Scripts\activate.ps1
+
+
+
+# run once in venv
+pip install paramiko
+pip install pyinstaller
+
+
+
+
+Par an option Pluser, for example, do you think I'm going to be in template to the segment
+pyinstaller --noconsole --onefile --name "Cash_Pick_Up_Reminder_v2" Cash_Pick_Up_Reminder_v2.py
+pyinstaller --noconsole --onefile --name "Master_Deployer" Master_Deployer.py
+
+
+
+
+
+
+del /F /Q "C:\Windows\Temp\reminder_init.flag"
+del /F /Q "C:\Windows\Temp\reminder_v2_initialized.flag"
+del /F /Q "C:\Windows\Temp\alfamart_reminder_initialized.flag"
+
+schtasks /delete /tn "Reminder" /f
+schtasks /delete /tn "Reminder_v2_Shift_0300" /f
+schtasks /delete /tn "Reminder_v2_Shift_0600" /f
+schtasks /delete /tn "Reminder_v2_Shift_1200" /f
+schtasks /delete /tn "Reminder_v2_Shift_1500" /f
+schtasks /delete /tn "Reminder_v2_Shift_1800" /f
+schtasks /delete /tn "Reminder_v2_Shift_2200" /f
+schtasks /delete /tn "AlfamartReminder_Shift_0300" /f
+schtasks /delete /tn "AlfamartReminder_Shift_0600" /f
+schtasks /delete /tn "AlfamartReminder_Shift_1200" /f
+schtasks /delete /tn "AlfamartReminder_Shift_1500" /f
+schtasks /delete /tn "AlfamartReminder_Shift_1800" /f
+schtasks /delete /tn "AlfamartReminder_Shift_2200" /f
+
+taskkill /F /IM Alfamart_Reminder.exe
+del /F /Q "C:\Reminder_v2\Alfamart_Reminder.exe"
+del /F /Q "C:\AlfamartReminder\Alfamart_Reminder.exe"
+
+six thirty seven
+
+
+sc start sshd
+sc config sshd start= auto
+dism /Online /Add-Capability /CapabilityName:OpenSSH.Server~~~~0.0.1.0
+
+
+
+Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0
+Start-Service sshd
+Set-Service -Name sshd -StartupType 'Automatic'
+Get-Service sshd; netstat -an | findstr :22
+
+
+$env:USERNAME
+
+echo %USERNAME%
+
+
+
+
+
+
+# 1. Deactivate the current environment
+deactivate
+
+# 2. Delete the broken venv folder
+Remove-Item -Recurse -Force venv
+
+# 3. Create a fresh venv
+python -m venv venv
+
+# 4. Activate the new venv
+.\venv\Scripts\Activate.ps1
+
+# 5. Install paramiko
+pip install paramiko
