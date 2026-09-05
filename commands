@@ -30,8 +30,7 @@ pyinstaller --noconsole --onefile --name "Master_Deployer" master_deployer/main.
 
 
 
-del /F /Q "C:\Windows\Temp\reminder_init.flag"
-del /F /Q "C:\Windows\Temp\reminder_v2_initialized.flag"
+
 del /F /Q "C:\Windows\Temp\alfamart_reminder_initialized.flag"
 
 schtasks /delete /tn "Reminder" /f
