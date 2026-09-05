@@ -15,9 +15,6 @@ def render_preview_modal(parent_root, sub_title, message, layout_type, s1_title,
         preview_win.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
         preview_win.resizable(False, False)
 
-        top_bar = tk.Frame(preview_win, bg="#001B3A", height=24)
-        top_bar.pack(fill="x")
-        tk.Label(top_bar, text="E-services Reminder", font=("Segoe UI", 8, "bold"), fg="white", bg="#001B3A", padx=8).pack(side="left", pady=2)
 
         header_frame = tk.Frame(preview_win, bg="#FFFFFF", pady=4)
         header_frame.pack(fill="x")
@@ -86,24 +83,38 @@ def render_preview_modal(parent_root, sub_title, message, layout_type, s1_title,
         ).pack(pady=(0, 6))
 
     else:
-        window_width = 460
-        window_height = 220
+        window_width = 580
+        window_height = 460
         center_x = int((preview_win.winfo_screenwidth() / 2) - (window_width / 2))
         center_y = int((preview_win.winfo_screenheight() / 2) - (window_height / 2))
         preview_win.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
         preview_win.resizable(False, False)
 
-        header_frame = tk.Frame(preview_win, bg="#FFFFFF", pady=10)
+        header_frame = tk.Frame(preview_win, bg="#FFFFFF", pady=25)
         header_frame.pack(fill="x")
 
-        tk.Label(header_frame, text=sub_title, font=("Segoe UI", 11, "bold"), fg="#000000", bg="#FFFFFF").pack()
+        tk.Label(
+            header_frame, text=(sub_title or "REMINDER").upper(), font=("Impact", 24),
+            fg="#0A2540", bg="#FFFFFF"
+        ).pack()
 
-        body_frame = tk.Frame(preview_win, bg="#FFFFFF", padx=20, pady=5)
+        div_frame = tk.Frame(preview_win, bg="#FFFFFF")
+        div_frame.pack(fill="x", padx=35)
+        tk.Frame(div_frame, bg="#666666", height=2).pack(fill="x", pady=(0, 15))
+
+        body_frame = tk.Frame(preview_win, bg="#FFFFFF", padx=50, pady=10)
         body_frame.pack(fill="both", expand=True)
 
-        tk.Label(body_frame, text=message, font=("Segoe UI", 9), fg="#333333", bg="#FFFFFF", justify="left", wraplength=400).pack(anchor="w", fill="both", expand=True)
+        tk.Label(
+            body_frame, text=message, font=("Segoe UI", 13),
+            fg="#1A1A1A", bg="#FFFFFF", justify="left", wraplength=480
+        ).pack(anchor="w", fill="both", expand=True)
 
-        btn_frame = tk.Frame(preview_win, bg="#FFFFFF", pady=8)
+        btn_frame = tk.Frame(preview_win, bg="#FFFFFF", pady=25)
         btn_frame.pack(fill="x")
 
-        tk.Button(btn_frame, text="OK", font=("Segoe UI", 8, "bold"), bg="#E1E1E1", fg="#000000", padx=20, pady=3, bd=1, relief="solid", command=preview_win.destroy).pack()
+        tk.Button(
+            btn_frame, text="✔  OK, NAINTINDIHAN KO!", font=("Segoe UI", 9, "bold"),
+            bg="#28A745", fg="white", activebackground="#218838", activeforeground="white",
+            padx=25, pady=5, bd=0, cursor="hand2", command=preview_win.destroy
+        ).pack()

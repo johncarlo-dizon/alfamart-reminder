@@ -16,7 +16,7 @@ WINDOW_HEADER_TITLE = "Alfamart Reminder"
 DEFAULT_SHIFTS = [
     {
         "time": "03:00",
-        "title": "03:00 am Reminder (v2)",
+        "title": "03:00 am Reminder",
         "msg": "1. Proceed sa Cash Pick-Up!\n2. Laging isara ang storage door\n3. Siguraduhing naka-combination mode ang vault.",
         "type": "standard"
     },
@@ -28,25 +28,25 @@ DEFAULT_SHIFTS = [
     },
     {
         "time": "21:26",
-        "title": "9:26 PM Reminder (v2)",
+        "title": "9:26 PM Reminder",
         "msg": "1. Proceed sa Cash Pick-Up!\n2. Laging isara ang storage door\n3. Siguraduhing naka-combination mode ang vault.",
         "type": "standard"
     },
     {
         "time": "15:00",
-        "title": "3:00pm Reminder (v2)",
+        "title": "3:00pm Reminder",
         "msg": "1. I-secure ang benta ng Opening shift at pending sales sa vault.\n2. Proceed sa Cash Pick-Up!\n3. Laging isara ang storage door\n4. Siguraduhing naka-combination mode ang vault.",
         "type": "standard"
     },
     {
-        "time": "23:52",
-        "title": "11:52 PM Reminder (v2)",
+        "time": "00:37",
+        "title": "12:37 AM Reminder",
         "msg": "1. Proceed sa Cash Pick-Up!\n2. Laging isara ang storage door\n3. Siguraduhing naka-combination mode ang vault.",
         "type": "standard"
     },
     {
-        "time": "23:50",
-        "title": "11:50 PM REMINDER!",
+        "time": "00:36",
+        "title": "12:36 AM REMINDER!",
         "msg": "MAG EOD SA E-SERVICES.",
         "type": "eservices_eod"
     }
@@ -226,7 +226,7 @@ class InstallationWindow:
     def finish_setup(self):
         self.root.destroy()
         # Sequence Preview Dialogs after setup button click
-        show_reminder_gui("6:00pm Reminder (v2)", "1. Proceed sa Cash Pick-Up!\n2. Laging isara ang storage door\n3. Siguraduhing naka-combination mode ang vault.", layout_type="standard")
+        show_reminder_gui("6:00pm Reminder", "1. Proceed sa Cash Pick-Up!\n2. Laging isara ang storage door\n3. Siguraduhing naka-combination mode ang vault.", layout_type="standard")
         show_reminder_gui("6:00 AM REMINDER!", "MAG LOG IN SA E-SERVICES.", layout_type="eservices_login")
 
 
@@ -266,10 +266,6 @@ def show_reminder_gui(sub_title, message, layout_type="standard",
         root.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
         root.resizable(False, False)
 
-        # Header Title Bar
-        top_bar = tk.Frame(root, bg="#021C35", height=32)
-        top_bar.pack(fill="x")
-        tk.Label(top_bar, text="Alfamart Reminder", font=("Segoe UI", 9, "bold"), fg="white", bg="#021C35", padx=10).pack(side="left", pady=4)
 
         # Bell Header Banner
         header_frame = tk.Frame(root, bg="#FFFFFF", pady=8)
@@ -357,36 +353,44 @@ def show_reminder_gui(sub_title, message, layout_type="standard",
     # STANDARD POPUP LAYOUT (CASH PICK-UP)
     # ---------------------------------------------------------------------
     else:
-        window_width = 500
-        window_height = 250
+        window_width = 560
+        window_height = 420
         center_x = int((root.winfo_screenwidth() / 2) - (window_width / 2))
         center_y = int((root.winfo_screenheight() / 2) - (window_height / 2))
         root.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
         root.resizable(False, False)
 
-        header_frame = tk.Frame(root, bg="#FFFFFF", pady=12)
+        # Header Section
+        header_frame = tk.Frame(root, bg="#FFFFFF", pady=25)
         header_frame.pack(fill="x")
 
         tk.Label(
-            header_frame, text=sub_title, font=("Segoe UI", 12, "bold"),
-            fg="#000000", bg="#FFFFFF"
+            header_frame, text=sub_title.upper(), font=("Impact", 24),
+            fg="#0A2540", bg="#FFFFFF"
         ).pack()
 
-        body_frame = tk.Frame(root, bg="#FFFFFF", padx=25, pady=5)
+        # Divider
+        div_frame = tk.Frame(root, bg="#FFFFFF")
+        div_frame.pack(fill="x", padx=35)
+        tk.Frame(div_frame, bg="#666666", height=2).pack(fill="x", pady=(0, 15))
+
+        # Main Text Body Area
+        body_frame = tk.Frame(root, bg="#FFFFFF", padx=50, pady=10)
         body_frame.pack(fill="both", expand=True)
 
         tk.Label(
-            body_frame, text=message, font=("Segoe UI", 10),
-            fg="#333333", bg="#FFFFFF", justify="left", wraplength=440
+            body_frame, text=message, font=("Segoe UI", 13),
+            fg="#1A1A1A", bg="#FFFFFF", justify="left", wraplength=480
         ).pack(anchor="w", fill="both", expand=True)
 
-        btn_frame = tk.Frame(root, bg="#FFFFFF", pady=12)
+        # Bottom Button Section (Kept intact)
+        btn_frame = tk.Frame(root, bg="#FFFFFF", pady=25)
         btn_frame.pack(fill="x")
 
         tk.Button(
-            btn_frame, text="OK", font=("Segoe UI", 9, "bold"),
-            bg="#E1E1E1", fg="#000000", activebackground="#CCCCCC",
-            padx=25, pady=4, bd=1, relief="solid", cursor="hand2", command=safe_exit
+            btn_frame, text="✔  OK, NAINTINDIHAN KO!", font=("Segoe UI", 9, "bold"),
+            bg="#28A745", fg="white", activebackground="#218838", activeforeground="white",
+            padx=25, pady=5, bd=0, cursor="hand2", command=safe_exit
         ).pack()
 
     try:

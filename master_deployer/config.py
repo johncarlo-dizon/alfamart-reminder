@@ -36,7 +36,7 @@ PRESETS = {
 DEFAULT_TEMPLATES = [
     {
         "time": "03:00",
-        "title": "03:00 am Reminder (v2)",
+        "title": "03:00 am Reminder",
         "type": "standard",
         "lines": "1. Proceed sa Cash Pick-Up!\n2. Laging isara ang storage door\n3. Siguraduhing naka-combination mode ang vault.",
         "step1_title": "POS",
