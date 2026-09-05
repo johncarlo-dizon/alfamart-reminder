@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['Master_Deployer.py'],
+    ['master_deployer/main.py'],
     pathex=[],
     binaries=[],
     datas=[],

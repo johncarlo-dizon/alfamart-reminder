@@ -1,4 +1,3 @@
-#Alfamart_Reminder.py
 import sys
 import os
 import subprocess
@@ -13,42 +12,44 @@ DEFAULT_NTP_SERVER = "time1.google.com"
 EXE_PATH = r"C:\Reminder_v2\Alfamart_Reminder.exe"
 WINDOW_HEADER_TITLE = "Alfamart Reminder"
 
+# Default Shifts including both Cash Pick-Up & E-Services Tasks
 DEFAULT_SHIFTS = [
     {
         "time": "03:00",
         "title": "03:00 am Reminder (v2)",
-        "msg": "1. Proceed sa Cash Pick-Up!\n2. Laging isara ang storage door\n3. Siguraduhing naka-combination mode ang vault."
+        "msg": "1. Proceed sa Cash Pick-Up!\n2. Laging isara ang storage door\n3. Siguraduhing naka-combination mode ang vault.",
+        "type": "standard"
     },
     {
         "time": "06:00",
-        "title": "6:00am Reminder (v2)",
-        "msg": "1. I-secure ang benta ng graveyard at pending sales.\n2. Proceed sa Cash Pick-Up!\n3. Laging isara ang storage door\n4. Siguraduhing naka-combination mode ang vault."
+        "title": "6:00 AM REMINDER!",
+        "msg": "MAG LOG IN SA E-SERVICES.",
+        "type": "eservices_login"
     },
     {
-        "time": "12:00",
-        "title": "12:00nn Reminder (v2)",
-        "msg": "1. Proceed sa Cash Pick-Up!\n2. Laging isara ang storage door\n3. Siguraduhing naka-combination mode ang vault."
+        "time": "21:26",
+        "title": "9:26 PM Reminder (v2)",
+        "msg": "1. Proceed sa Cash Pick-Up!\n2. Laging isara ang storage door\n3. Siguraduhing naka-combination mode ang vault.",
+        "type": "standard"
     },
     {
         "time": "15:00",
         "title": "3:00pm Reminder (v2)",
-        "msg": "1. I-secure ang benta ng Opening shift at pending sales sa vault.\n2. Proceed sa Cash Pick-Up!\n3. Laging isara ang storage door\n4. Siguraduhing naka-combination mode ang vault."
+        "msg": "1. I-secure ang benta ng Opening shift at pending sales sa vault.\n2. Proceed sa Cash Pick-Up!\n3. Laging isara ang storage door\n4. Siguraduhing naka-combination mode ang vault.",
+        "type": "standard"
     },
     {
-        "time": "18:00",
-        "title": "6:00pm Reminder (v2)",
-        "msg": "1. Proceed sa Cash Pick-Up!\n2. Laging isara ang storage door\n3. Siguraduhing naka-combination mode ang vault."
+        "time": "23:52",
+        "title": "11:52 PM Reminder (v2)",
+        "msg": "1. Proceed sa Cash Pick-Up!\n2. Laging isara ang storage door\n3. Siguraduhing naka-combination mode ang vault.",
+        "type": "standard"
     },
     {
-        "time": "22:00",
-        "title": "10:00pm Reminder (v2)",
-        "msg": "1. I-secure ang benta ng closing shift at pending sales sa vault.\n2. Proceed sa Cash Pick-Up!\n3. Laging isara ang storage door\n4. Siguraduhing naka-combination mode ang vault."
-    },
-    {
-        "time": "11:34",
-        "title": "11:34am Reminder",
-        "msg": "1. Proceed sa Cash Pick-Up!\n2. Laging isara ang storage door\n3. Siguraduhing naka-combination mode ang vault."
-    },
+        "time": "23:50",
+        "title": "11:50 PM REMINDER!",
+        "msg": "MAG EOD SA E-SERVICES.",
+        "type": "eservices_eod"
+    }
 ]
 
 def is_admin():
@@ -58,7 +59,6 @@ def is_admin():
         return False
 
 def run_as_admin():
-    """Relaunches the executable as Administrator if privileges are missing."""
     script = os.path.abspath(sys.argv[0])
     params = ' '.join([f'"{arg}"' for arg in sys.argv[1:]])
     ctypes.windll.shell32.ShellExecuteW(None, "runas", script, params, None, 1)
@@ -68,11 +68,10 @@ def run_as_admin():
 class InstallationWindow:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.withdraw()  # Hide window while configuring geometry to prevent flashing
+        self.root.withdraw()
 
         self.root.title(WINDOW_HEADER_TITLE)
         self.root.configure(bg="#FFFFFF")
-        
         self.root.attributes('-topmost', True)
 
         window_width = 540
@@ -84,7 +83,6 @@ class InstallationWindow:
         self.root.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
         self.root.resizable(False, False)
 
-        # Header Frame
         header_frame = tk.Frame(self.root, bg="#FFFFFF", pady=10)
         header_frame.pack(fill="x")
 
@@ -93,7 +91,6 @@ class InstallationWindow:
             font=("Segoe UI", 11, "bold"), fg="#000000", bg="#FFFFFF"
         ).pack()
 
-        # Status & Progress Frame
         status_frame = tk.Frame(self.root, bg="#FFFFFF", padx=20)
         status_frame.pack(fill="x")
 
@@ -106,7 +103,6 @@ class InstallationWindow:
         self.progress = ttk.Progressbar(status_frame, orient="horizontal", length=500, mode="determinate")
         self.progress.pack(fill="x")
 
-        # Logs Console Frame
         log_frame = tk.LabelFrame(self.root, text=" Installation Logs ", font=("Segoe UI", 8, "bold"), bg="#FFFFFF", padx=10, pady=5)
         log_frame.pack(fill="both", expand=True, padx=20, pady=(10, 5))
 
@@ -117,18 +113,16 @@ class InstallationWindow:
         self.log_box.pack(side="left", fill="both", expand=True)
         log_scroll.pack(side="right", fill="y")
 
-        # Action Button Frame
         btn_frame = tk.Frame(self.root, bg="#FFFFFF", pady=12)
         btn_frame.pack(fill="x", side="bottom")
 
         self.ok_btn = tk.Button(
             btn_frame, text="OK", font=("Segoe UI", 9, "bold"),
             bg="#E1E1E1", fg="#000000", activebackground="#CCCCCC",
-            padx=30, pady=4, bd=1, relief="solid", state="disabled", command=self.root.destroy
+            padx=30, pady=4, bd=1, relief="solid", state="disabled", command=self.finish_setup
         )
         self.ok_btn.pack()
 
-        # Unhide and force focus after initialization layout is built
         self.root.deiconify()
         self.root.lift()
         self.root.focus_force()
@@ -147,11 +141,10 @@ class InstallationWindow:
 
     def run_setup(self):
         self.log("--- Starting Setup & Initialization ---")
-        
-        # Step 1: Configure Time Sync
+
+        # Step 1: NTP Time Sync
         self.update_progress(10, "Configuring Google NTP Time Server...")
         self.log(f"Setting NTP Server to: {DEFAULT_NTP_SERVER}")
-        
         try:
             cmd1 = f'w32tm /config /manualpeerlist:"{DEFAULT_NTP_SERVER}" /syncfromflags:manual /reliable:YES /update'
             subprocess.run(cmd1, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
@@ -170,7 +163,7 @@ class InstallationWindow:
         except Exception as e:
             self.log(f" [ERROR] Time sync failed: {str(e).strip()}")
 
-        # Step 2: Register Default Shift Tasks via PowerShell
+        # Step 2: Task Scheduler Registration
         self.update_progress(50, "Registering Default Shift Tasks...")
         self.log("\n--- Registering Task Scheduler Jobs ---")
 
@@ -185,11 +178,12 @@ class InstallationWindow:
 
             safe_title = shift["title"].replace('"', '`"')
             safe_msg = shift["msg"].replace('\r', '').replace('\n', ' | ').replace('"', '`"')
+            layout_type = shift.get("type", "standard")
 
             self.update_progress(prog_val, f"Adding Task: {task_name} ({formatted_time})...")
 
             ps_script = f'''
-            $action = New-ScheduledTaskAction -Execute "{EXE_PATH}" -Argument '--custom "{safe_title}" "{safe_msg}"'
+            $action = New-ScheduledTaskAction -Execute "{EXE_PATH}" -Argument '--custom "{safe_title}" "{safe_msg}" --type "{layout_type}"'
             $trigger = New-ScheduledTaskTrigger -Daily -At "{formatted_time}"
             $settings = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries
             Register-ScheduledTask -TaskName "{task_name}" -Action $action -Trigger $trigger -Settings $settings -User "$env:USERNAME" -RunLevel Highest -Force
@@ -212,11 +206,9 @@ class InstallationWindow:
                 err_msg = res.stderr.strip() or res.stdout.strip()
                 self.log(f" [FAILED] {task_name} -> {err_msg}")
 
-        # Step 3: Complete
         self.update_progress(100, "Initialization Complete!")
         self.log(f"\nCompleted! {installed_count}/{total_shifts} tasks created in Task Scheduler.")
-        
-        # Save Flag
+
         try:
             with open(r"C:\Windows\Temp\alfamart_reminder_initialized.flag", "w") as f:
                 f.write("initialized")
@@ -228,95 +220,210 @@ class InstallationWindow:
             winsound.MessageBeep(winsound.MB_ICONINFORMATION)
         except Exception:
             pass
-        
+
         self.root.mainloop()
 
+    def finish_setup(self):
+        self.root.destroy()
+        # Sequence Preview Dialogs after setup button click
+        show_reminder_gui("6:00pm Reminder (v2)", "1. Proceed sa Cash Pick-Up!\n2. Laging isara ang storage door\n3. Siguraduhing naka-combination mode ang vault.", layout_type="standard")
+        show_reminder_gui("6:00 AM REMINDER!", "MAG LOG IN SA E-SERVICES.", layout_type="eservices_login")
 
-def show_reminder_gui(sub_title, message):
-    """Displays the custom White Theme Reminder Dialog without screen flash."""
+
+def show_reminder_gui(sub_title, message, layout_type="standard",
+                       s1_title=None, s1_sub=None, s1_body=None,
+                       s2_title=None, s2_sub=None, s2_body=None,
+                       warning=None):
+    """Renders both Standard Cash Pick-Up and Rich E-Services UI Layouts dynamically.
+
+    s1_*/s2_*/warning let the deployer override the step-checklist text per
+    schedule entry. Any left as None fall back to the original hardcoded
+    login/EOD copy so old-style --custom/--type calls still work unchanged.
+    """
     root = tk.Tk()
-    root.withdraw()  # Hide window while configuring geometry to prevent flashing
+    root.withdraw()
 
     root.title(WINDOW_HEADER_TITLE)
     root.configure(bg="#FFFFFF")
-    
     root.attributes('-topmost', True)
-
-    window_width = 500
-    window_height = 250
-    screen_width = root.winfo_screenwidth()
-    screen_height = root.winfo_screenheight()
-    center_x = int((screen_width / 2) - (window_width / 2))
-    center_y = int((screen_height / 2) - (window_height / 2))
-    root.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
-    root.resizable(False, False)
 
     def safe_exit():
         try:
             root.destroy()
         finally:
-            sys.exit(0)
+            pass
 
     root.protocol("WM_DELETE_WINDOW", safe_exit)
 
-    header_frame = tk.Frame(root, bg="#FFFFFF", pady=12)
-    header_frame.pack(fill="x")
+    # ---------------------------------------------------------------------
+    # RICH E-SERVICES POPUP LAYOUT
+    # ---------------------------------------------------------------------
+    if layout_type in ["eservices_login", "eservices_eod"]:
+        window_width = 560
+        window_height = 420
+        center_x = int((root.winfo_screenwidth() / 2) - (window_width / 2))
+        center_y = int((root.winfo_screenheight() / 2) - (window_height / 2))
+        root.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
+        root.resizable(False, False)
 
-    header_label = tk.Label(
-        header_frame, text=sub_title, font=("Segoe UI", 12, "bold"),
-        fg="#000000", bg="#FFFFFF"
-    )
-    header_label.pack()
+        # Header Title Bar
+        top_bar = tk.Frame(root, bg="#021C35", height=32)
+        top_bar.pack(fill="x")
+        tk.Label(top_bar, text="Alfamart Reminder", font=("Segoe UI", 9, "bold"), fg="white", bg="#021C35", padx=10).pack(side="left", pady=4)
 
-    body_frame = tk.Frame(root, bg="#FFFFFF", padx=25, pady=5)
-    body_frame.pack(fill="both", expand=True)
+        # Bell Header Banner
+        header_frame = tk.Frame(root, bg="#FFFFFF", pady=8)
+        header_frame.pack(fill="x")
 
-    msg_label = tk.Label(
-        body_frame, text=message, font=("Segoe UI", 10),
-        fg="#333333", bg="#FFFFFF", justify="left", wraplength=440
-    )
-    msg_label.pack(anchor="w", fill="both", expand=True)
+        title_container = tk.Frame(header_frame, bg="#FFFFFF")
+        title_container.pack()
 
-    btn_frame = tk.Frame(root, bg="#FFFFFF", pady=12)
-    btn_frame.pack(fill="x")
+        tk.Label(title_container, text="🔔", font=("Segoe UI", 24), fg="#D93025", bg="#FFFFFF").pack(side="left", padx=(0, 8))
+        tk.Label(title_container, text=sub_title.upper(), font=("Impact", 22), fg="#0A2540", bg="#FFFFFF").pack(side="left")
 
-    ack_button = tk.Button(
-        btn_frame, text="OK", font=("Segoe UI", 9, "bold"),
-        bg="#E1E1E1", fg="#000000", activebackground="#CCCCCC",
-        padx=25, pady=4, bd=1, relief="solid", cursor="hand2", command=safe_exit
-    )
-    ack_button.pack()
+        # Divider & Subheader
+        div_frame = tk.Frame(root, bg="#FFFFFF")
+        div_frame.pack(fill="x", padx=40)
+        tk.Frame(div_frame, bg="#A0A0A0", height=1).pack(fill="x", pady=(0, 2))
+        tk.Label(div_frame, text="HUWAG KALIMUTAN!", font=("Segoe UI", 9, "bold"), fg="#D93025", bg="#FFFFFF").pack()
+
+        # Action Instruction
+        action_text = message.strip() if message and message.strip() else (
+            "MAG LOG IN SA E-SERVICES." if layout_type == "eservices_login" else "MAG EOD SA E-SERVICES."
+        )
+        tk.Label(root, text=action_text, font=("Segoe UI Black", 16, "bold"), fg="#0A2540", bg="#FFFFFF").pack(pady=(2, 6))
+
+        # 2-Step Checklist Banner
+        step_badge = tk.Frame(root, bg="#002060", padx=12, pady=2)
+        step_badge.pack()
+        tk.Label(step_badge, text="2-STEP CHECKLIST", font=("Segoe UI", 8, "bold"), fg="white", bg="#002060").pack()
+
+        box_frame = tk.Frame(root, bg="#FFFFFF", pady=10)
+        box_frame.pack()
+
+        # Resolve step 1 (POS) text: use what was passed in, else the old hardcoded default
+        s1_title_final = (s1_title or "POS").upper()
+        s1_sub_final = (s1_sub or ("REGULAR POS LOGIN" if layout_type == "eservices_login" else "REGULAR POS EOD"))
+        s1_body_final = (s1_body or ("Mag log in sa POS tulad ng\nnakasanayan." if layout_type == "eservices_login" else "Mag EOD sa POS\ntulad ng nakasanayan."))
+
+        # Box 1 (POS)
+        b1 = tk.Frame(box_frame, bg="#FFFFFF", bd=2, relief="solid", highlightbackground="#28A745")
+        b1.config(highlightthickness=1, highlightcolor="#28A745")
+        b1.grid(row=0, column=0, padx=10, ipadx=10, ipady=5)
+
+        tk.Label(b1, text=f"❶ {s1_title_final}", font=("Segoe UI", 10, "bold"), fg="#28A745", bg="#FFFFFF").pack()
+        tk.Label(b1, text=s1_sub_final, font=("Segoe UI", 8, "bold"), fg="#000000", bg="#FFFFFF").pack()
+        tk.Label(b1, text=s1_body_final, font=("Segoe UI", 7), fg="#555555", bg="#FFFFFF", justify="center").pack()
+
+        # Arrow Indicator
+        tk.Label(box_frame, text="➔", font=("Segoe UI", 18, "bold"), fg="#002060", bg="#FFFFFF").grid(row=0, column=1)
+
+        # Resolve step 2 (E-Services) text: use what was passed in, else the old hardcoded default
+        s2_title_final = (s2_title or "E-SERVICES").upper()
+        s2_sub_final = (s2_sub or ("E-SERVICES LOGIN" if layout_type == "eservices_login" else "E-SERVICES EOD"))
+        s2_body_final = (s2_body or ("Mag log in sa E-Services\nkada Cash-In." if layout_type == "eservices_login" else "Mag EOD sa E-Services."))
+
+        # Box 2 (E-Services)
+        b2 = tk.Frame(box_frame, bg="#FFFFFF", bd=2, relief="solid", highlightbackground="#0056B3")
+        b2.config(highlightthickness=1, highlightcolor="#0056B3")
+        b2.grid(row=0, column=2, padx=10, ipadx=10, ipady=5)
+
+        tk.Label(b2, text=f"❷ {s2_title_final}", font=("Segoe UI", 10, "bold"), fg="#0056B3", bg="#FFFFFF").pack()
+        tk.Label(b2, text=s2_sub_final, font=("Segoe UI", 8, "bold"), fg="#000000", bg="#FFFFFF").pack()
+        tk.Label(b2, text=s2_body_final, font=("Segoe UI", 7), fg="#555555", bg="#FFFFFF", justify="center").pack()
+
+        # Warning Callout Box
+        warn_box = tk.Frame(root, bg="#FFF3CD", bd=1, relief="solid", highlightbackground="#FFEEBA")
+        warn_box.pack(fill="x", padx=35, pady=(0, 10), ipady=4)
+
+        w_text = warning.strip() if warning and warning.strip() else (
+            "UGALIIN MAG LOG IN AGAD SA E-SERVICES\nMATAPOS ANG POS REGULAR LOG IN\nPARA MAKAIWAS SA MGA TECHNICAL ERRORS"
+            if layout_type == "eservices_login" else
+            "UGALIIN MAG EOD SA E-SERVICES\nMATAPOS ANG POS REGULAR EOD\nPARA MAKAIWAS SA MGA TECHNICAL ERRORS"
+        )
+
+        tk.Label(warn_box, text="⚠️", font=("Segoe UI", 12), bg="#FFF3CD").pack(side="left", padx=8)
+        tk.Label(warn_box, text=w_text, font=("Segoe UI", 7, "bold"), fg="#856404", bg="#FFF3CD", justify="left").pack(side="left")
+
+        # Action Button
+        ack_button = tk.Button(
+            root, text="✔  OK, NAINTINDIHAN KO!", font=("Segoe UI", 9, "bold"),
+            bg="#28A745", fg="white", activebackground="#218838", activeforeground="white",
+            padx=25, pady=5, bd=0, cursor="hand2", command=safe_exit
+        )
+        ack_button.pack(pady=(0, 10))
+
+    # ---------------------------------------------------------------------
+    # STANDARD POPUP LAYOUT (CASH PICK-UP)
+    # ---------------------------------------------------------------------
+    else:
+        window_width = 500
+        window_height = 250
+        center_x = int((root.winfo_screenwidth() / 2) - (window_width / 2))
+        center_y = int((root.winfo_screenheight() / 2) - (window_height / 2))
+        root.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
+        root.resizable(False, False)
+
+        header_frame = tk.Frame(root, bg="#FFFFFF", pady=12)
+        header_frame.pack(fill="x")
+
+        tk.Label(
+            header_frame, text=sub_title, font=("Segoe UI", 12, "bold"),
+            fg="#000000", bg="#FFFFFF"
+        ).pack()
+
+        body_frame = tk.Frame(root, bg="#FFFFFF", padx=25, pady=5)
+        body_frame.pack(fill="both", expand=True)
+
+        tk.Label(
+            body_frame, text=message, font=("Segoe UI", 10),
+            fg="#333333", bg="#FFFFFF", justify="left", wraplength=440
+        ).pack(anchor="w", fill="both", expand=True)
+
+        btn_frame = tk.Frame(root, bg="#FFFFFF", pady=12)
+        btn_frame.pack(fill="x")
+
+        tk.Button(
+            btn_frame, text="OK", font=("Segoe UI", 9, "bold"),
+            bg="#E1E1E1", fg="#000000", activebackground="#CCCCCC",
+            padx=25, pady=4, bd=1, relief="solid", cursor="hand2", command=safe_exit
+        ).pack()
 
     try:
         winsound.MessageBeep(winsound.MB_ICONINFORMATION)
     except Exception:
         pass
 
-    # Unhide and focus window smoothly once centering and layouts are applied
     root.deiconify()
     root.lift()
     root.focus_force()
-
     root.mainloop()
 
 
 def main():
     parser = argparse.ArgumentParser(description="Alfamart Reminder Popup")
     parser.add_argument("--custom", nargs=2, metavar=('TITLE', 'MESSAGE'), help="Custom Title and Message")
+    parser.add_argument("--type", default="standard", help="Layout type (standard, eservices_login, eservices_eod)")
+    parser.add_argument("--s1_title", default=None, help="Step 1 header override")
+    parser.add_argument("--s1_sub", default=None, help="Step 1 subtitle override")
+    parser.add_argument("--s1_body", default=None, help="Step 1 body text override")
+    parser.add_argument("--s2_title", default=None, help="Step 2 header override")
+    parser.add_argument("--s2_sub", default=None, help="Step 2 subtitle override")
+    parser.add_argument("--s2_body", default=None, help="Step 2 body text override")
+    parser.add_argument("--warning", default=None, help="Bottom warning callout override")
     parser.add_argument("--init", action="store_true", help="Initialize Time Sync and Default Scheduler")
     args = parser.parse_args()
 
     flag_path = r"C:\Windows\Temp\alfamart_reminder_initialized.flag"
 
-    # Self-Initialize setup on first execution or --init — but never for a plain reminder popup
     if not args.custom and (args.init or not os.path.exists(flag_path)):
         if not is_admin():
             run_as_admin()
-        
+
         setup_win = InstallationWindow()
         setup_win.run_setup()
+        return
 
-    # Window Body Sub-title and Messages when triggered by scheduler
     sub_title = "Scheduled Reminder"
     message = "1. Proceed to Cash Pick-Up!\n2. Secure vault and storage doors."
 
@@ -324,7 +431,19 @@ def main():
         sub_title = args.custom[0]
         message = args.custom[1].replace(" | ", "\n")
 
-    show_reminder_gui(sub_title, message)
+    def restore_pipes(text):
+        return text.replace(" | ", "\n") if text else text
+
+    show_reminder_gui(
+        sub_title, message, layout_type=args.type,
+        s1_title=args.s1_title,
+        s1_sub=args.s1_sub,
+        s1_body=restore_pipes(args.s1_body),
+        s2_title=args.s2_title,
+        s2_sub=args.s2_sub,
+        s2_body=restore_pipes(args.s2_body),
+        warning=restore_pipes(args.warning),
+    )
 
 
 if __name__ == "__main__":
