@@ -6,6 +6,7 @@ import os
 BASE_DIR = os.path.dirname(os.path.abspath(sys.argv[0]))
 SCHEDULES_FILE = os.path.join(BASE_DIR, "schedules.json")
 STORES_FILE = os.path.join(BASE_DIR, "stores.txt")
+LOGS_FILE = os.path.join(BASE_DIR, "deployment_logs.txt")
 
 # Standard Template Preset Definitions
 PRESETS = {

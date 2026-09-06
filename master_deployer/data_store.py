@@ -1,6 +1,6 @@
 import os
 import json
-
+import ipaddress
 from config import SCHEDULES_FILE, STORES_FILE, DEFAULT_TEMPLATES
 
 
@@ -20,6 +20,10 @@ def load_stores():
                 parts = [p.strip() for p in line.split(",")]
                 if len(parts) >= 3:
                     ip, user, pwd = parts[0], parts[1], parts[2]
+                    try:
+                        ipaddress.ip_address(ip)
+                    except ValueError:
+                        continue  # not a real IP — skip stray example/legend rows
                     name = parts[3] if len(parts) > 3 and parts[3] else ip
                     code = parts[4] if len(parts) > 4 and parts[4] else ""
                     pos = parts[5] if len(parts) > 5 and parts[5] else ""

@@ -11,7 +11,8 @@ from data_store import load_stores, load_schedules, save_schedules
 from ssh_utils import run_ssh_command, test_connection
 from ui_utils import adjust_window_geometry
 from preview_window import render_preview_modal
-
+from log_manager import append_full_log
+from log_history_window import show_log_history_window
 
 class MasterITDashboard:
     def __init__(self, root):
@@ -24,6 +25,8 @@ class MasterITDashboard:
         self.schedules = load_schedules()
         self.selected_schedule_index = None
         self.log_queue = queue.Queue()
+        self.failed_stores = []
+        self.success_stores = []
 
         main_container = tk.Frame(self.root, bg="#f4f4f4")
         main_container.pack(fill="both", expand=True, padx=10, pady=8)
@@ -138,6 +141,7 @@ class MasterITDashboard:
         tk.Button(ctrl_btn_frame, text="Select All", font=("Segoe UI", 8), command=self.select_all_stores).pack(side="left", padx=2)
         tk.Button(ctrl_btn_frame, text="Deselect All", font=("Segoe UI", 8), command=self.deselect_all_stores).pack(side="left", padx=2)
         tk.Button(ctrl_btn_frame, text="🔄 Reload stores.txt", font=("Segoe UI", 8), command=self.reload_stores_list).pack(side="right", padx=2)
+        tk.Button(ctrl_btn_frame, text="📜 Logs History", font=("Segoe UI", 8), command=self.open_logs_history).pack(side="right", padx=2)
 
         list_container = tk.Frame(store_frame, bg="#f4f4f4")
         list_container.pack(fill="both", expand=True)
@@ -174,7 +178,7 @@ class MasterITDashboard:
 
         self.log_text.pack(side="left", fill="both", expand=True)
         log_scroll.pack(side="right", fill="y")
-
+        self.log_text.tag_configure("failed", foreground="#D9534F")
 
         progress_frame = tk.Frame(main_container, bg="#f4f4f4")
         progress_frame.pack(fill="x", pady=(0, 2))
@@ -446,11 +450,21 @@ class MasterITDashboard:
         self.populate_store_checkboxes()
         self.append_log("System: Reloaded stores.txt successfully.")
 
-    def append_log(self, text):
+    def append_log(self, text, tag=None):
         self.log_text.config(state="normal")
-        self.log_text.insert(tk.END, text + "\n")
+        if tag:
+            self.log_text.insert(tk.END, text + "\n", tag)
+        else:
+            self.log_text.insert(tk.END, text + "\n")
         self.log_text.config(state="disabled")
         self.log_text.see(tk.END)
+
+    def log_both(self, text, tag=None):
+        self.append_log(text, tag)
+        append_full_log(text)
+
+    def open_logs_history(self):
+        show_log_history_window(self.root)
 
     def get_selected_stores(self):
         return [s for s in self.stores if self.store_vars.get(s["ip"], tk.BooleanVar()).get()]
@@ -468,39 +482,51 @@ class MasterITDashboard:
         if not messagebox.askyesno("Confirm Clean Update", f"This will CLEAR ALL existing reminder tasks on {len(selected_stores)} store PC(s) and install the {len(self.schedules)} master tasks.\n\nProceed?"):
             return
 
+        self.failed_stores = []
+        self.success_stores = []
+        self.log_text.config(state="normal")
+        self.log_text.delete("1.0", tk.END)
+        self.log_text.config(state="disabled")
         self.deploy_btn.config(state="disabled", text="⏳ Deploying...")
         self.progress.config(mode="determinate", maximum=len(selected_stores), value=0)
         self.status_label.config(text=f"Starting deployment to {len(selected_stores)} store(s)...")
 
-        self.append_log(f"\n==================================================")
-        self.append_log(f"--- STARTING CLEAN UPDATE TO {len(selected_stores)} STORE(S) ---")
-        self.append_log(f"==================================================")
-
+        self.log_both(f"\n==================================================")
+        self.log_both(f"--- STARTING CLEAN UPDATE TO {len(selected_stores)} STORE(S) ---")
+        self.log_both(f"==================================================")
         app_path = r"C:\Reminder_v2\Alfamart_Reminder.exe"
 
         def deploy_worker(store):
             ip, user, pwd = store["ip"], store["user"], store["pwd"]
+            store_code = store.get("code", "")
+            store_pos = store.get("pos", "")
+            label_parts = [p for p in [store_code, store_pos] if p]
+            store_label = f"{' - '.join(label_parts)} ({ip})" if label_parts else ip
 
-            def log(text):
-                self.log_queue.put(("log", f"[STORE: {ip}] {text}"))
+            def log(text, tag=None):
+                self.log_queue.put(("log", f"[STORE: {ip}] {text}", tag))
+
+            def detail(text):
+                self.log_queue.put(("detail", f"[STORE: {ip}] {text}", None))
 
             log("Connecting...")
-            self.log_queue.put(("status", f"Connecting to {ip}..."))
+            self.log_queue.put(("status", f"Connecting to {ip}...", None))
 
             conn_ok, conn_err = test_connection(ip, user, pwd)
             if not conn_ok:
                 if conn_err == "AUTH_FAILED":
-                    log("FAILED — SSH authentication rejected.")
+                    log("FAILED — SSH authentication rejected.", tag="failed")
                 else:
-                    log(f"FAILED — could not connect: {conn_err}")
-                log("SKIPPED — fix connectivity/credentials for this store and re-run.")
-                self.log_queue.put(("progress", 1))
+                    log(f"FAILED — could not connect: {conn_err}", tag="failed")
+                log("SKIPPED — fix connectivity/credentials for this store and re-run.", tag="failed")
+                self.log_queue.put(("failed_store", store_label, None))
+                self.log_queue.put(("progress", 1, None))
                 return
 
             log("Connected and authenticated successfully.")
             run_ssh_command(ip, user, pwd, 'taskkill /F /IM Alfamart_Reminder.exe')
 
-            self.log_queue.put(("status", f"Detecting logged-in user on {ip}..."))
+            self.log_queue.put(("status", f"Detecting logged-in user on {ip}...", None))
             detect_cmd = (
                 'powershell -NoProfile -Command '
                 '"(Get-Process -Name explorer -IncludeUserName -ErrorAction SilentlyContinue | '
@@ -522,18 +548,19 @@ class MasterITDashboard:
                                     break
 
             if not raw_user:
-                log("WARNING: no interactive desktop user detected.")
-                log("SKIPPED — installing as SYSTEM would make the popup invisible.")
-                self.log_queue.put(("progress", 1))
+                log("WARNING: no interactive desktop user detected.", tag="failed")
+                log("SKIPPED — installing as SYSTEM would make the popup invisible.", tag="failed")
+                self.log_queue.put(("failed_store", store_label, None))
+                self.log_queue.put(("progress", 1, None))
                 return
 
             logged_user = raw_user.split("\\")[-1] if "\\" in raw_user else raw_user
-            log(f"Detected interactive user: '{logged_user}'")
+            detail(f"Detected interactive user: '{logged_user}'")
 
-            self.log_queue.put(("status", f"Wiping old tasks on {ip}..."))
+            self.log_queue.put(("status", f"Wiping old tasks on {ip}...", None))
             clean_cmd = 'powershell -Command "Get-ScheduledTask | Where-Object {$_.TaskName -like \'Reminder_v2*\' -or $_.TaskName -like \'Alfamart_Reminder*\'} | Unregister-ScheduledTask -Confirm:$false"'
             run_ssh_command(ip, user, pwd, clean_cmd)
-            log("Wiped old scheduled tasks.")
+            detail("Wiped old scheduled tasks.")
 
             success_count = 0
             total = len(self.schedules)
@@ -565,7 +592,7 @@ class MasterITDashboard:
                 task_id = formatted_time.replace(":", "")
                 task_name = f"Alfamart_Reminder_Shift_{task_id}"
 
-                self.log_queue.put(("status", f"Installing {task_name} on {ip} ({i + 1}/{total})..."))
+                self.log_queue.put(("status", f"Installing {task_name} on {ip} ({i + 1}/{total})...", None))
 
                 arg_str = (
                     f'--custom "{safe_title}" "{safe_msg}" --type "{l_type}" '
@@ -599,17 +626,22 @@ class MasterITDashboard:
 
                 if ok_c and "TaskName" in out_c:
                     success_count += 1
-                    log(f"Installed task: {task_name} ({formatted_time}) [{l_type}]")
+                    detail(f"Installed task: {task_name} ({formatted_time}) [{l_type}]")
                 else:
-                    log(f"FAILED task: {task_name} -> {err_c.strip() or out_c.strip()}")
+                    log(f"FAILED task: {task_name} -> {err_c.strip() or out_c.strip()}", tag="failed")
 
-            log(f"Completed: {success_count}/{total} tasks installed.")
-            self.log_queue.put(("progress", 1))
+            done_tag = None if success_count == total else "failed"
+            log(f"Completed: {success_count}/{total} tasks installed.", tag=done_tag)
+            if success_count < total:
+                self.log_queue.put(("failed_store", store_label, None))
+            else:
+                self.log_queue.put(("success_store", store_label, None))
+            self.log_queue.put(("progress", 1, None))
 
         def run_all():
             with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
                 list(executor.map(deploy_worker, selected_stores))
-            self.log_queue.put(("done", None))
+            self.log_queue.put(("done", None, None))
 
         threading.Thread(target=run_all, daemon=True).start()
         self.root.after(100, self.poll_log_queue)
@@ -617,17 +649,35 @@ class MasterITDashboard:
     def poll_log_queue(self):
         try:
             while True:
-                kind, payload = self.log_queue.get_nowait()
+                kind, payload, tag = self.log_queue.get_nowait()
                 if kind == "log":
-                    self.append_log(payload)
+                    self.log_both(payload, tag)
+                elif kind == "detail":
+                    append_full_log(payload)
                 elif kind == "status":
                     self.status_label.config(text=payload)
                 elif kind == "progress":
                     self.progress.step(payload)
+                elif kind == "failed_store":
+                    if payload not in self.failed_stores:
+                        self.failed_stores.append(payload)
+                elif kind == "success_store":
+                    if payload not in self.success_stores:
+                        self.success_stores.append(payload)
                 elif kind == "done":
-                    self.append_log("\n==================================================")
-                    self.append_log("--- DEPLOYMENT FINISHED ---")
-                    self.append_log("==================================================\n")
+                    self.log_both("\n==================================================")
+                    self.log_both("--- DEPLOYMENT FINISHED ---")
+                    if self.success_stores:
+                        self.log_both(f"Stores completed successfully ({len(self.success_stores)}):")
+                        for s in self.success_stores:
+                            self.log_both(f"  ✓ {s}")
+                    if self.failed_stores:
+                        self.log_both(f"Stores with errors ({len(self.failed_stores)}):", tag="failed")
+                        for s in self.failed_stores:
+                            self.log_both(f"  ✗ {s}", tag="failed")
+                    if not self.success_stores and not self.failed_stores:
+                        self.log_both("No stores were processed.")
+                    self.log_both("==================================================\n")
                     self.status_label.config(text="Deployment finished.")
                     self.deploy_btn.config(state="normal", text="🚀 CLEAN UPDATE ALL & PUSH TASKS TO STORES")
                     messagebox.showinfo("Clean Push Finished", "Clean update completed! Check results log below.")

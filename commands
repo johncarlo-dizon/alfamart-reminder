@@ -24,7 +24,7 @@ Par an option Pluser, for example, do you think I'm going to be in template to t
 pyinstaller --noconsole --onefile --name "Alfamart_Reminder" Alfamart_Reminder.py
 pyinstaller --noconsole --onefile --name "Master_Deployer" Master_Deployer.py
 pyinstaller --noconsole --onefile --name "Master_Deployer" master_deployer/main.py
-
+pyinstaller --noconsole --onefile --name "Master_Deployer" --clean master_deployer/main.py
 
 
 
