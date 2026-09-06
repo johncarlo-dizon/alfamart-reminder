@@ -7,17 +7,26 @@ from config import SCHEDULES_FILE, STORES_FILE, DEFAULT_TEMPLATES
 def load_stores():
     stores = []
     if os.path.exists(STORES_FILE):
+        current_dc = "Ungrouped"
         with open(STORES_FILE, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
-                if line and not line.startswith("#"):
-                    parts = line.split(",")
-                    if len(parts) >= 3:
-                        stores.append({
-                            "ip": parts[0].strip(),
-                            "user": parts[1].strip(),
-                            "pwd": parts[2].strip()
-                        })
+                if not line or line.startswith("#"):
+                    continue
+                if "," not in line:
+                    # No commas = this line is a DC section header, not a store row
+                    current_dc = line
+                    continue
+                parts = [p.strip() for p in line.split(",")]
+                if len(parts) >= 3:
+                    ip, user, pwd = parts[0], parts[1], parts[2]
+                    name = parts[3] if len(parts) > 3 and parts[3] else ip
+                    code = parts[4] if len(parts) > 4 and parts[4] else ""
+                    pos = parts[5] if len(parts) > 5 and parts[5] else ""
+                    stores.append({
+                        "ip": ip, "user": user, "pwd": pwd,
+                        "dc": current_dc, "name": name, "code": code, "pos": pos
+                    })
     return stores
 
 

@@ -390,15 +390,48 @@ class MasterITDashboard:
             tk.Label(self.scrollable_frame, text="No stores found in stores.txt", bg="#ffffff", fg="red").pack(anchor="w", padx=5, pady=2)
             return
 
-        for idx, s in enumerate(self.stores):
-            var = tk.BooleanVar(value=True)
-            ip = s["ip"]
-            self.store_vars[ip] = var
-            chk = tk.Checkbutton(
-                self.scrollable_frame, text=f"Store #{idx+1} — {ip} ({s['user']})",
-                variable=var, bg="#ffffff", activebackground="#ffffff", anchor="w"
-            )
-            chk.pack(fill="x", anchor="w", padx=5, pady=1)
+        grouped = {}
+        for s in self.stores:
+            grouped.setdefault(s.get("dc", "Ungrouped"), []).append(s)
+
+        for dc_name in sorted(grouped.keys()):
+            dc_stores = grouped[dc_name]
+
+            dc_header = tk.Frame(self.scrollable_frame, bg="#e9ecef")
+            dc_header.pack(fill="x", pady=(6, 2))
+
+            dc_var = tk.BooleanVar(value=True)
+
+            def make_toggle_dc(dc_stores=dc_stores, dc_var=dc_var):
+                def toggle_dc():
+                    new_val = dc_var.get()
+                    for s in dc_stores:
+                        self.store_vars[s["ip"]].set(new_val)
+                return toggle_dc
+
+            tk.Checkbutton(
+                dc_header, text=f"  {dc_name}  ({len(dc_stores)} store{'s' if len(dc_stores) != 1 else ''})",
+                variable=dc_var, bg="#e9ecef", activebackground="#e9ecef",
+                font=("Segoe UI", 8, "bold"), anchor="w",
+                command=make_toggle_dc()
+            ).pack(fill="x", padx=2)
+
+            for s in dc_stores:
+                var = tk.BooleanVar(value=True)
+                ip = s["ip"]
+                self.store_vars[ip] = var
+
+                label_bits = [s.get("name") or ip]
+                if s.get("code"):
+                    label_bits.append(f"[{s['code']}]")
+                if s.get("pos"):
+                    label_bits.append(f"- {s['pos']}")
+                label_bits.append(f"({ip})")
+
+                tk.Checkbutton(
+                    self.scrollable_frame, text=" ".join(label_bits),
+                    variable=var, bg="#ffffff", activebackground="#ffffff", anchor="w"
+                ).pack(fill="x", anchor="w", padx=20, pady=1)
 
     def select_all_stores(self):
         for var in self.store_vars.values():
