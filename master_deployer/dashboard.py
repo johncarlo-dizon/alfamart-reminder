@@ -35,7 +35,7 @@ class MasterITDashboard:
         table_frame.pack(side="left", fill="y", padx=(0, 8))
 
         columns = ("Time", "Title", "Type")
-        self.sched_tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=13)
+        self.sched_tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=8)
         self.sched_tree.heading("Time", text="Time")
         self.sched_tree.heading("Title", text="Popup Title")
         self.sched_tree.heading("Type", text="Layout")
@@ -81,7 +81,7 @@ class MasterITDashboard:
 
         s1_frame = tk.Frame(self.eservices_frame, bg="#f4f4f4")
         s1_frame.pack(fill="x", pady=1)
-        tk.Label(s1_frame, text="Step 1 Header/Sub:", bg="#f4f4f4", font=("Segoe UI", 7, "bold"), width=15, anchor="w").pack(side="left")
+        tk.Label(s1_frame, text="Step 1 Header/Sub:", bg="#f4f4f4", font=("Segoe UI", 7, "bold"), width=20, anchor="w").pack(side="left")
         self.s1_title_entry = tk.Entry(s1_frame, font=("Segoe UI", 8), width=10)
         self.s1_title_entry.pack(side="left", padx=(0, 4))
         self.s1_sub_entry = tk.Entry(s1_frame, font=("Segoe UI", 8))
@@ -89,13 +89,13 @@ class MasterITDashboard:
 
         s1_body_frame = tk.Frame(self.eservices_frame, bg="#f4f4f4")
         s1_body_frame.pack(fill="x", pady=1)
-        tk.Label(s1_body_frame, text="Step 1 Body Text:", bg="#f4f4f4", font=("Segoe UI", 7, "bold"), width=15, anchor="nw").pack(side="left")
+        tk.Label(s1_body_frame, text="Step 1 Body Text:", bg="#f4f4f4", font=("Segoe UI", 7, "bold"), width=20, anchor="nw").pack(side="left")
         self.s1_body_text = tk.Text(s1_body_frame, height=2, font=("Segoe UI", 8))
         self.s1_body_text.pack(side="left", fill="x", expand=True)
 
         s2_frame = tk.Frame(self.eservices_frame, bg="#f4f4f4")
         s2_frame.pack(fill="x", pady=1)
-        tk.Label(s2_frame, text="Step 2 Header/Sub:", bg="#f4f4f4", font=("Segoe UI", 7, "bold"), width=15, anchor="w").pack(side="left")
+        tk.Label(s2_frame, text="Step 2 Header/Sub:", bg="#f4f4f4", font=("Segoe UI", 7, "bold"), width=20, anchor="w").pack(side="left")
         self.s2_title_entry = tk.Entry(s2_frame, font=("Segoe UI", 8), width=10)
         self.s2_title_entry.pack(side="left", padx=(0, 4))
         self.s2_sub_entry = tk.Entry(s2_frame, font=("Segoe UI", 8))
@@ -103,13 +103,13 @@ class MasterITDashboard:
 
         s2_body_frame = tk.Frame(self.eservices_frame, bg="#f4f4f4")
         s2_body_frame.pack(fill="x", pady=1)
-        tk.Label(s2_body_frame, text="Step 2 Body Text:", bg="#f4f4f4", font=("Segoe UI", 7, "bold"), width=15, anchor="nw").pack(side="left")
+        tk.Label(s2_body_frame, text="Step 2 Body Text:", bg="#f4f4f4", font=("Segoe UI", 7, "bold"), width=20, anchor="nw").pack(side="left")
         self.s2_body_text = tk.Text(s2_body_frame, height=2, font=("Segoe UI", 8))
         self.s2_body_text.pack(side="left", fill="x", expand=True)
 
         warn_frame = tk.Frame(self.eservices_frame, bg="#f4f4f4")
         warn_frame.pack(fill="x", pady=1)
-        tk.Label(warn_frame, text="Bottom Warning Note:", bg="#f4f4f4", font=("Segoe UI", 7, "bold"), width=15, anchor="nw").pack(side="left")
+        tk.Label(warn_frame, text="Bottom Warning Note:", bg="#f4f4f4", font=("Segoe UI", 7, "bold"), width=20, anchor="nw").pack(side="left")
         self.warning_text = tk.Text(warn_frame, height=2, font=("Segoe UI", 8))
         self.warning_text.pack(side="left", fill="x", expand=True)
 
@@ -122,8 +122,15 @@ class MasterITDashboard:
         tk.Button(edit_btn_frame, text="👁️ Live Preview Modal", font=("Segoe UI", 8, "bold"), bg="#17A2B8", fg="white", command=self.show_live_preview).pack(side="left", padx=6)
         tk.Button(edit_btn_frame, text="Clear", font=("Segoe UI", 8), command=self.clear_form).pack(side="right", padx=2)
 
-        store_frame = tk.LabelFrame(main_container, text=" Target Stores Selection ", font=("Segoe UI", 9, "bold"), bg="#f4f4f4", padx=8, pady=2)
-        store_frame.pack(fill="x", pady=(0, 4))
+                # Two-column row: stores on the left, live results on the right
+        columns_frame = tk.Frame(main_container, bg="#f4f4f4")
+        columns_frame.pack(fill="both", expand=True, pady=(0, 4))
+        columns_frame.grid_columnconfigure(0, weight=1)
+        columns_frame.grid_columnconfigure(1, weight=1)
+        columns_frame.grid_rowconfigure(0, weight=1)
+
+        store_frame = tk.LabelFrame(columns_frame, text=" Target Stores Selection ", font=("Segoe UI", 9, "bold"), bg="#f4f4f4", padx=8, pady=2)
+        store_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 4))
 
         ctrl_btn_frame = tk.Frame(store_frame, bg="#f4f4f4")
         ctrl_btn_frame.pack(fill="x", pady=(0, 2))
@@ -133,10 +140,10 @@ class MasterITDashboard:
         tk.Button(ctrl_btn_frame, text="🔄 Reload stores.txt", font=("Segoe UI", 8), command=self.reload_stores_list).pack(side="right", padx=2)
 
         list_container = tk.Frame(store_frame, bg="#f4f4f4")
-        list_container.pack(fill="x")
+        list_container.pack(fill="both", expand=True)
 
         self.store_vars = {}
-        canvas = tk.Canvas(list_container, height=50, bg="#ffffff", highlightthickness=1, highlightbackground="#ccc")
+        canvas = tk.Canvas(list_container, bg="#ffffff", highlightthickness=1, highlightbackground="#ccc")
         scrollbar = ttk.Scrollbar(list_container, orient="vertical", command=canvas.yview)
         scrollable_frame = tk.Frame(canvas, bg="#ffffff")
 
@@ -147,15 +154,27 @@ class MasterITDashboard:
         canvas.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
         self.scrollable_frame = scrollable_frame
-
-        deploy_btn_frame = tk.Frame(main_container, bg="#f4f4f4")
-        deploy_btn_frame.pack(fill="x", pady=(0, 4))
+        deploy_btn_frame = tk.Frame(store_frame, bg="#f4f4f4")
+        deploy_btn_frame.pack(fill="x", pady=(4, 0))
 
         self.deploy_btn = tk.Button(
             deploy_btn_frame, text="🚀 CLEAN UPDATE ALL & PUSH TASKS TO STORES", font=("Segoe UI", 9, "bold"),
             bg="#28A745", fg="white", pady=4, command=self.clean_update_and_push
         )
         self.deploy_btn.pack(fill="x")
+        log_frame = tk.LabelFrame(columns_frame, text=" Deployment Execution Results ", font=("Segoe UI", 9, "bold"), bg="#f4f4f4", padx=8, pady=2)
+        log_frame.grid(row=0, column=1, sticky="nsew", padx=(4, 0))
+
+        log_container = tk.Frame(log_frame, bg="#f4f4f4")
+        log_container.pack(fill="both", expand=True)
+
+        self.log_text = tk.Text(log_container, font=("Consolas", 8), wrap="word", state="disabled")
+        log_scroll = ttk.Scrollbar(log_container, orient="vertical", command=self.log_text.yview)
+        self.log_text.configure(yscrollcommand=log_scroll.set)
+
+        self.log_text.pack(side="left", fill="both", expand=True)
+        log_scroll.pack(side="right", fill="y")
+
 
         progress_frame = tk.Frame(main_container, bg="#f4f4f4")
         progress_frame.pack(fill="x", pady=(0, 2))
@@ -168,19 +187,6 @@ class MasterITDashboard:
 
         self.progress = ttk.Progressbar(progress_frame, orient="horizontal", mode="determinate")
         self.progress.pack(fill="x")
-
-        log_frame = tk.LabelFrame(main_container, text=" Deployment Execution Results ", font=("Segoe UI", 9, "bold"), bg="#f4f4f4", padx=8, pady=2)
-        log_frame.pack(fill="both", expand=True)
-
-        log_container = tk.Frame(log_frame, bg="#f4f4f4")
-        log_container.pack(fill="both", expand=True)
-
-        self.log_text = tk.Text(log_container, font=("Consolas", 8), wrap="word", state="disabled")
-        log_scroll = ttk.Scrollbar(log_container, orient="vertical", command=self.log_text.yview)
-        self.log_text.configure(yscrollcommand=log_scroll.set)
-
-        self.log_text.pack(side="left", fill="both", expand=True)
-        log_scroll.pack(side="right", fill="y")
 
         self.refresh_schedule_table()
         self.populate_store_checkboxes()
