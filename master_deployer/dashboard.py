@@ -199,42 +199,61 @@ class MasterITDashboard:
         self.on_layout_change()
 
     # --- AUTO-POPULATE TEMPLATE ON DROPDOWN CHANGE ---
+    def _set_dynamic_fields_state(self, state):
+        entries = (self.s1_title_entry, self.s1_sub_entry, self.s2_title_entry, self.s2_sub_entry)
+        texts = (self.s1_body_text, self.s2_body_text, self.warning_text)
+
+        if state == "disabled":
+            bg_color, fg_color = "#e9ecef", "#8a8a8a"
+        else:
+            bg_color, fg_color = "#ffffff", "#000000"
+
+        for widget in entries:
+            widget.config(state=state, disabledbackground=bg_color, disabledforeground=fg_color,
+                           bg=bg_color, fg=fg_color)
+        for widget in texts:
+            widget.config(state=state, bg=bg_color, fg=fg_color)
+
     def on_layout_change(self, event=None):
         l_type = self.type_combo.get()
-        if l_type in ["eservices_login", "eservices_eod"]:
+        is_dynamic = l_type in ["eservices_login", "eservices_eod"]
+
+        if not self.eservices_frame.winfo_ismapped():
             self.eservices_frame.pack(fill="x", pady=(2, 0))
 
-            # If selecting from dropdown manually (and not via clicking table row)
+        self._set_dynamic_fields_state("normal")
+
+        if is_dynamic:
             if event is not None and l_type in PRESETS:
                 p = PRESETS[l_type]
                 self.title_entry.delete(0, tk.END)
                 self.title_entry.insert(0, p["title"])
-
                 self.msg_entry.delete("1.0", tk.END)
                 self.msg_entry.insert("1.0", p["lines"])
-
                 self.s1_title_entry.delete(0, tk.END)
                 self.s1_title_entry.insert(0, p["step1_title"])
-
                 self.s1_sub_entry.delete(0, tk.END)
                 self.s1_sub_entry.insert(0, p["step1_sub"])
-
                 self.s1_body_text.delete("1.0", tk.END)
                 self.s1_body_text.insert("1.0", p["step1_body"])
-
                 self.s2_title_entry.delete(0, tk.END)
                 self.s2_title_entry.insert(0, p["step2_title"])
-
                 self.s2_sub_entry.delete(0, tk.END)
                 self.s2_sub_entry.insert(0, p["step2_sub"])
-
                 self.s2_body_text.delete("1.0", tk.END)
                 self.s2_body_text.insert("1.0", p["step2_body"])
-
                 self.warning_text.delete("1.0", tk.END)
                 self.warning_text.insert("1.0", p["warning"])
         else:
-            self.eservices_frame.pack_forget()
+            self.s1_title_entry.delete(0, tk.END)
+            self.s1_sub_entry.delete(0, tk.END)
+            self.s1_body_text.delete("1.0", tk.END)
+            self.s2_title_entry.delete(0, tk.END)
+            self.s2_sub_entry.delete(0, tk.END)
+            self.s2_body_text.delete("1.0", tk.END)
+            self.warning_text.delete("1.0", tk.END)
+
+        self._set_dynamic_fields_state("normal" if is_dynamic else "disabled")
 
     def show_live_preview(self):
         t = self.title_entry.get().strip() or "SAMPLE TITLE"
@@ -278,6 +297,7 @@ class MasterITDashboard:
         self.msg_entry.delete("1.0", tk.END)
         self.msg_entry.insert("1.0", s.get("lines", ""))
 
+        self._set_dynamic_fields_state("normal")
         self.s1_title_entry.delete(0, tk.END)
         self.s1_title_entry.insert(0, s.get("step1_title", "POS"))
 
@@ -309,6 +329,7 @@ class MasterITDashboard:
         self.type_combo.set("standard")
         self.msg_entry.delete("1.0", tk.END)
 
+        self._set_dynamic_fields_state("normal")
         self.s1_title_entry.delete(0, tk.END)
         self.s1_sub_entry.delete(0, tk.END)
         self.s1_body_text.delete("1.0", tk.END)
