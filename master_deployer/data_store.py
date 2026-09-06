@@ -33,7 +33,23 @@ def load_stores():
                     })
     return stores
 
+def read_stores_raw():
+    """Return the raw text content of stores.txt for editing, or an empty
+    string if the file doesn't exist yet."""
+    if os.path.exists(STORES_FILE):
+        try:
+            with open(STORES_FILE, "r", encoding="utf-8") as f:
+                return f.read()
+        except Exception:
+            return ""
+    return ""
 
+
+def write_stores_raw(content):
+    """Overwrite stores.txt with new raw text content from the editor."""
+    with open(STORES_FILE, "w", encoding="utf-8") as f:
+        f.write(content)
+        
 def load_schedules():
     if os.path.exists(SCHEDULES_FILE):
         try:

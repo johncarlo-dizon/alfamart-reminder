@@ -1190,6 +1190,10 @@
   ('statistics',
    'C:\\Users\\63999\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\statistics.py',
    'PYMODULE'),
+  ('store_editor_window',
+   'C:\\ALFAMART '
+   'PROJECTS\\Reminder_v2\\master_deployer\\store_editor_window.py',
+   'PYMODULE'),
   ('string',
    'C:\\Users\\63999\\AppData\\Local\\Python\\pythoncore-3.14-64\\Lib\\string\\__init__.py',
    'PYMODULE'),

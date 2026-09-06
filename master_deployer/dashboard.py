@@ -13,6 +13,7 @@ from ui_utils import adjust_window_geometry
 from preview_window import render_preview_modal
 from log_manager import append_full_log
 from log_history_window import show_log_history_window
+from store_editor_window import show_store_editor_window
 
 class MasterITDashboard:
     def __init__(self, root):
@@ -142,6 +143,7 @@ class MasterITDashboard:
         tk.Button(ctrl_btn_frame, text="Deselect All", font=("Segoe UI", 8), command=self.deselect_all_stores).pack(side="left", padx=2)
         tk.Button(ctrl_btn_frame, text="🔄 Reload stores.txt", font=("Segoe UI", 8), command=self.reload_stores_list).pack(side="right", padx=2)
         tk.Button(ctrl_btn_frame, text="📜 Logs History", font=("Segoe UI", 8), command=self.open_logs_history).pack(side="right", padx=2)
+        tk.Button(ctrl_btn_frame, text="✏️ Edit stores.txt", font=("Segoe UI", 8), command=self.open_store_editor).pack(side="right", padx=2)
 
         list_container = tk.Frame(store_frame, bg="#f4f4f4")
         list_container.pack(fill="both", expand=True)
@@ -465,6 +467,9 @@ class MasterITDashboard:
 
     def open_logs_history(self):
         show_log_history_window(self.root)
+
+    def open_store_editor(self):
+        show_store_editor_window(self.root, on_save=self.reload_stores_list)
 
     def get_selected_stores(self):
         return [s for s in self.stores if self.store_vars.get(s["ip"], tk.BooleanVar()).get()]
