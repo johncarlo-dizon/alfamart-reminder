@@ -26,13 +26,20 @@ pyinstaller --noconsole --onefile --name "Master_Deployer" Master_Deployer.py
 pyinstaller --noconsole --onefile --name "Master_Deployer" master_deployer/main.py
 pyinstaller --noconsole --onefile --name "Master_Deployer" --clean master_deployer/main.py
 
+# list task sched
+Get-ScheduledTask | Where-Object {$_.TaskName -like '*Reminder*'} | Select-Object TaskName, State, @{Name="NextRun";Expression={(Get-ScheduledTaskInfo $_).NextRunTime}} | Format-Table -AutoSize
 
+# delete one shot
+Get-ScheduledTask | Where-Object {$_.TaskName -like 'Reminder_v2_Shift_*'} | Unregister-ScheduledTask -Confirm:$false
 
+script command
+ chmod +x combine_files.sh
+   ./combine_files.sh
 
 
 
 del /F /Q "C:\Windows\Temp\alfamart_reminder_initialized.flag"
-
+del /F /Q "C:\Windows\Temp\reminder_v2_initialized.flag"
 schtasks /delete /tn "Reminder" /f
 schtasks /delete /tn "Reminder_v2_Shift_0300" /f
 schtasks /delete /tn "Reminder_v2_Shift_0600" /f
