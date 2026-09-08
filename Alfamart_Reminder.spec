@@ -2,7 +2,7 @@
 
 
 a = Analysis(
-    ['Alfamart_Reminder.py'],
+    ['alfamart_reminder/main.py'],
     pathex=[],
     binaries=[],
     datas=[],

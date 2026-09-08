@@ -14,6 +14,7 @@ from preview_window import render_preview_modal
 from log_manager import append_full_log
 from log_history_window import show_log_history_window
 from store_editor_window import show_store_editor_window
+from ack_log_window import show_ack_log_window
 
 class MasterITDashboard:
     def __init__(self, root):
@@ -58,9 +59,30 @@ class MasterITDashboard:
 
         row0 = tk.Frame(self.form_frame, bg="#f4f4f4")
         row0.pack(fill="x", pady=1)
-        tk.Label(row0, text="Time (HH:MM):", bg="#f4f4f4", font=("Segoe UI", 8, "bold")).pack(side="left")
-        self.time_entry = tk.Entry(row0, width=8, font=("Segoe UI", 9))
-        self.time_entry.pack(side="left", padx=(5, 12))
+        tk.Label(row0, text="Time:", bg="#f4f4f4", font=("Segoe UI", 8, "bold")).pack(side="left")
+
+        time_picker_frame = tk.Frame(row0, bg="#f4f4f4")
+        time_picker_frame.pack(side="left", padx=(5, 12))
+
+        self.hour_var = tk.StringVar(value="00")
+        self.minute_var = tk.StringVar(value="00")
+
+        vcmd_hour = (self.root.register(self._validate_hour_keystroke), '%P')
+        vcmd_minute = (self.root.register(self._validate_minute_keystroke), '%P')
+
+        self.hour_spin = tk.Spinbox(
+            time_picker_frame, from_=0, to=23, wrap=True, width=3, format="%02.0f",
+            textvariable=self.hour_var, font=("Segoe UI", 9), justify="center",
+            validate="key", validatecommand=vcmd_hour
+        )
+        self.hour_spin.pack(side="left")
+        tk.Label(time_picker_frame, text=":", bg="#f4f4f4", font=("Segoe UI", 9, "bold")).pack(side="left")
+        self.minute_spin = tk.Spinbox(
+            time_picker_frame, from_=0, to=59, wrap=True, width=3, format="%02.0f",
+            textvariable=self.minute_var, font=("Segoe UI", 9), justify="center",
+            validate="key", validatecommand=vcmd_minute
+        )
+        self.minute_spin.pack(side="left")
 
         tk.Label(row0, text="Layout Type:", bg="#f4f4f4", font=("Segoe UI", 8, "bold")).pack(side="left")
         self.type_combo = ttk.Combobox(row0, values=["standard", "eservices_login", "eservices_eod"], width=15, state="readonly")
@@ -144,6 +166,7 @@ class MasterITDashboard:
         tk.Button(ctrl_btn_frame, text="🔄 Reload stores.txt", font=("Segoe UI", 8), command=self.reload_stores_list).pack(side="right", padx=2)
         tk.Button(ctrl_btn_frame, text="📜 Logs History", font=("Segoe UI", 8), command=self.open_logs_history).pack(side="right", padx=2)
         tk.Button(ctrl_btn_frame, text="✏️ Edit stores.txt", font=("Segoe UI", 8), command=self.open_store_editor).pack(side="right", padx=2)
+        tk.Button(ctrl_btn_frame, text="📥 Pull Ack Logs", font=("Segoe UI", 8), command=self.open_ack_logs).pack(side="right", padx=2)
 
         list_container = tk.Frame(store_frame, bg="#f4f4f4")
         list_container.pack(fill="both", expand=True)
@@ -153,8 +176,21 @@ class MasterITDashboard:
         scrollbar = ttk.Scrollbar(list_container, orient="vertical", command=canvas.yview)
         scrollable_frame = tk.Frame(canvas, bg="#ffffff")
 
-        scrollable_frame.bind("<Configure>", lambda e: canvas.configure(scrollregion=canvas.bbox("all")))
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        self.store_canvas = canvas
+        self.store_canvas_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+
+        def _on_scrollable_configure(event):
+            canvas.configure(scrollregion=canvas.bbox("all"))
+
+        def _on_canvas_configure(event):
+            # Keep the embedded frame's width pinned to the canvas's actual
+            # width so content always lays out flush top-left instead of
+            # drifting after a resize, which is what causes the phantom
+            # blank space above the store list.
+            canvas.itemconfig(self.store_canvas_window, width=event.width)
+
+        scrollable_frame.bind("<Configure>", _on_scrollable_configure)
+        canvas.bind("<Configure>", _on_canvas_configure)
         canvas.configure(yscrollcommand=scrollbar.set)
 
         canvas.pack(side="left", fill="both", expand=True)
@@ -171,6 +207,18 @@ class MasterITDashboard:
         log_frame = tk.LabelFrame(columns_frame, text=" Deployment Execution Results ", font=("Segoe UI", 9, "bold"), bg="#f4f4f4", padx=8, pady=2)
         log_frame.grid(row=0, column=1, sticky="nsew", padx=(4, 0))
 
+        progress_frame = tk.Frame(log_frame, bg="#f4f4f4")
+        progress_frame.pack(fill="x", pady=(0, 4))
+
+        self.status_label = tk.Label(
+            progress_frame, text="Idle — ready to deploy",
+            font=("Segoe UI", 8, "italic"), fg="#555555", bg="#f4f4f4"
+        )
+        self.status_label.pack(anchor="w")
+
+        self.progress = ttk.Progressbar(progress_frame, orient="horizontal", mode="determinate")
+        self.progress.pack(fill="x")
+
         log_container = tk.Frame(log_frame, bg="#f4f4f4")
         log_container.pack(fill="both", expand=True)
 
@@ -181,18 +229,6 @@ class MasterITDashboard:
         self.log_text.pack(side="left", fill="both", expand=True)
         log_scroll.pack(side="right", fill="y")
         self.log_text.tag_configure("failed", foreground="#D9534F")
-
-        progress_frame = tk.Frame(main_container, bg="#f4f4f4")
-        progress_frame.pack(fill="x", pady=(0, 2))
-
-        self.status_label = tk.Label(
-            progress_frame, text="Idle — ready to deploy",
-            font=("Segoe UI", 8, "italic"), fg="#555555", bg="#f4f4f4"
-        )
-        self.status_label.pack(anchor="w")
-
-        self.progress = ttk.Progressbar(progress_frame, orient="horizontal", mode="determinate")
-        self.progress.pack(fill="x")
 
         self.refresh_schedule_table()
         self.populate_store_checkboxes()
@@ -255,6 +291,45 @@ class MasterITDashboard:
 
         self._set_dynamic_fields_state("normal" if is_dynamic else "disabled")
 
+    @staticmethod
+    def _validate_hour_keystroke(proposed):
+        if proposed == "":
+            return True
+        if not proposed.isdigit() or len(proposed) > 2:
+            return False
+        return int(proposed) <= 23
+
+    @staticmethod
+    def _validate_minute_keystroke(proposed):
+        if proposed == "":
+            return True
+        if not proposed.isdigit() or len(proposed) > 2:
+            return False
+        return int(proposed) <= 59
+
+    def get_time_value(self):
+        try:
+            h = int(self.hour_var.get())
+        except ValueError:
+            h = 0
+        try:
+            m = int(self.minute_var.get())
+        except ValueError:
+            m = 0
+        h = max(0, min(23, h))
+        m = max(0, min(59, m))
+        return f"{h:02d}:{m:02d}"
+
+    def set_time_value(self, time_str):
+        try:
+            h_str, m_str = time_str.split(":")
+            h = max(0, min(23, int(h_str)))
+            m = max(0, min(59, int(m_str)))
+        except (ValueError, AttributeError):
+            h, m = 0, 0
+        self.hour_var.set(f"{h:02d}")
+        self.minute_var.set(f"{m:02d}")
+
     def show_live_preview(self):
         t = self.title_entry.get().strip() or "SAMPLE TITLE"
         msg = self.msg_entry.get("1.0", tk.END).strip() or "SAMPLE MESSAGE"
@@ -288,8 +363,7 @@ class MasterITDashboard:
         self.selected_schedule_index = idx
         s = self.schedules[idx]
 
-        self.time_entry.delete(0, tk.END)
-        self.time_entry.insert(0, s["time"])
+        self.set_time_value(s["time"])
         self.title_entry.delete(0, tk.END)
         self.title_entry.insert(0, s["title"])
         self.type_combo.set(s.get("type", "standard"))
@@ -324,7 +398,7 @@ class MasterITDashboard:
     def clear_form(self):
         self.selected_schedule_index = None
         self.sched_tree.selection_remove(self.sched_tree.selection())
-        self.time_entry.delete(0, tk.END)
+        self.set_time_value("00:00")
         self.title_entry.delete(0, tk.END)
         self.type_combo.set("standard")
         self.msg_entry.delete("1.0", tk.END)
@@ -342,7 +416,7 @@ class MasterITDashboard:
         self.on_layout_change(event=None)
 
     def add_schedule(self):
-        t = self.time_entry.get().strip()
+        t = self.get_time_value()
         title = self.title_entry.get().strip()
         l_type = self.type_combo.get()
         lines = self.msg_entry.get("1.0", tk.END).strip()
@@ -375,7 +449,7 @@ class MasterITDashboard:
             messagebox.showwarning("Selection Error", "Please select a schedule from the list to update.")
             return
 
-        t = self.time_entry.get().strip()
+        t = self.get_time_value()
         title = self.title_entry.get().strip()
         l_type = self.type_combo.get()
         lines = self.msg_entry.get("1.0", tk.END).strip()
@@ -460,6 +534,15 @@ class MasterITDashboard:
                     variable=var, bg="#ffffff", activebackground="#ffffff", anchor="w"
                 ).pack(fill="x", anchor="w", padx=20, pady=1)
 
+        # Force layout to finalize synchronously, then recompute the
+        # scrollregion against the FINAL content and snap back to the top.
+        # Relying only on the async <Configure> binding leaves a race during
+        # a full rebuild where the scrollregion can settle larger than the
+        # actual rendered content, letting the scrollbar drag into blank space.
+        self.scrollable_frame.update_idletasks()
+        self.store_canvas.configure(scrollregion=self.store_canvas.bbox("all"))
+        self.store_canvas.yview_moveto(0)
+
     def select_all_stores(self):
         for var in self.store_vars.values():
             var.set(True)
@@ -491,6 +574,41 @@ class MasterITDashboard:
 
     def open_store_editor(self):
         show_store_editor_window(self.root, on_save=self.reload_stores_list)
+
+    def open_ack_logs(self):
+        selected_stores = self.get_selected_stores()
+        if not selected_stores:
+            messagebox.showwarning("Selection Error", "Please select at least one store PC to pull ack logs from.")
+            return
+
+        self.status_label.config(text=f"Pulling ack logs from {len(selected_stores)} store(s)...")
+
+        read_cmd = (
+            'powershell -NoProfile -Command '
+            '"if (Test-Path \'C:\\Reminder_v2\\ack_logs.txt\') '
+            '{ Get-Content -Raw -Path \'C:\\Reminder_v2\\ack_logs.txt\' } else { \'\' }"'
+        )
+
+        def fetch(store):
+            ip, user, pwd = store["ip"], store["user"], store["pwd"]
+            entry = {"ip": ip, "name": store.get("name") or ip, "code": store.get("code", "")}
+            ok, out, err = run_ssh_command(ip, user, pwd, read_cmd)
+            if not ok:
+                entry["error"] = f"Could not connect or read logs: {err.strip() or 'unknown error'}"
+            else:
+                entry["content"] = out.strip()
+            return entry
+
+        def worker():
+            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+                results = list(executor.map(fetch, selected_stores))
+            self.root.after(0, lambda: self._show_ack_results(results))
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _show_ack_results(self, results):
+        self.status_label.config(text="Idle — ready to deploy")
+        show_ack_log_window(self.root, results)
 
     def get_selected_stores(self):
         return [s for s in self.stores if self.store_vars.get(s["ip"], tk.BooleanVar()).get()]
@@ -528,6 +646,8 @@ class MasterITDashboard:
             store_pos = store.get("pos", "")
             label_parts = [p for p in [store_code, store_pos] if p]
             store_label = f"{' - '.join(label_parts)} ({ip})" if label_parts else ip
+            safe_store_code = store_code.replace("'", "''").replace('"', '')
+            safe_store_name = (store.get("name") or ip).replace("'", "''").replace('"', '')
 
             def log(text, tag=None):
                 self.log_queue.put(("log", f"[STORE: {ip}] {text}", tag))
@@ -624,7 +744,8 @@ class MasterITDashboard:
                     f'--custom "{safe_title}" "{safe_msg}" --type "{l_type}" '
                     f'--s1_title "{safe_s1_t}" --s1_sub "{safe_s1_s}" --s1_body "{safe_s1_b}" '
                     f'--s2_title "{safe_s2_t}" --s2_sub "{safe_s2_s}" --s2_body "{safe_s2_b}" '
-                    f'--warning "{safe_warn}"'
+                    f'--warning "{safe_warn}" '
+                    f'--store_code "{safe_store_code}" --store_name "{safe_store_name}"'
                 )
 
                 ps_script = (

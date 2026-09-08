@@ -5,34 +5,35 @@ cd C:\path\to\your\ProjectFolder
 python -m venv venv
 
 # 3. Activate the virtual environment
-# On Windows Command Prompt (CMD):
-venv\Scripts\activate.bat
+  # On Windows Command Prompt (CMD):
+  venv\Scripts\activate.bat
 
-# On Windows PowerShell:
-.\venv\Scripts\activate.ps1
+  # On Windows PowerShell:
+  .\venv\Scripts\activate.ps1
 
-
-
-# run once in venv
+# 4. run once in venv
 pip install paramiko
 pip install pyinstaller
 
-
-
-
-Par an option Pluser, for example, do you think I'm going to be in template to the segment
-pyinstaller --noconsole --onefile --name "Alfamart_Reminder" Alfamart_Reminder.py
-pyinstaller --noconsole --onefile --name "Master_Deployer" Master_Deployer.py
-pyinstaller --noconsole --onefile --name "Master_Deployer" master_deployer/main.py
+# OLD BUILD COMMANDS
 pyinstaller --noconsole --onefile --name "Master_Deployer" --clean master_deployer/main.py
+pyinstaller --noconsole --onefile --name "Alfamart_Reminder" --clean alfamart_reminder/main.py
 
-# list task sched
+
+# NEW BUILD COMMANDS
+pyinstaller --noconsole --onefile --name "Master_Deployer" --clean --collect-all paramiko --collect-all cryptography master_deployer/main.py
+
+pyinstaller --noconsole --onefile --name "Alfamart_Reminder" --clean alfamart_reminder/main.py
+
+
+
+# LIST TASK SCHED 
 Get-ScheduledTask | Where-Object {$_.TaskName -like '*Reminder*'} | Select-Object TaskName, State, @{Name="NextRun";Expression={(Get-ScheduledTaskInfo $_).NextRunTime}} | Format-Table -AutoSize
 
-# delete one shot
+# DELETE ONE SHOT ALL SCHED
 Get-ScheduledTask | Where-Object {$_.TaskName -like 'Reminder_v2_Shift_*'} | Unregister-ScheduledTask -Confirm:$false
 
-script command
+# BASH COMBINE SCRIPT COMMMAND
  chmod +x combine_files.sh
    ./combine_files.sh
 

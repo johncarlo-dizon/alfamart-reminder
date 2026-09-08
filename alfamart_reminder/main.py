@@ -6,11 +6,13 @@ import winsound
 import ctypes
 import tkinter as tk
 from tkinter import ttk
+from datetime import datetime
 
 # Default Configuration Parameters
 DEFAULT_NTP_SERVER = "time1.google.com"
 EXE_PATH = r"C:\Reminder_v2\Alfamart_Reminder.exe"
 WINDOW_HEADER_TITLE = "Alfamart Reminder"
+ACK_LOG_PATH = r"C:\Reminder_v2\ack_logs.txt"
 
 # Default Shifts including both Cash Pick-Up & E-Services Tasks
 DEFAULT_SHIFTS = [
@@ -230,10 +232,25 @@ class InstallationWindow:
         show_reminder_gui("6:00 AM REMINDER!", "MAG LOG IN SA E-SERVICES.", layout_type="eservices_login")
 
 
+def log_ack_click(store_code="", store_name=""):
+    """Append one line to the local ack log next to the exe.
+    Local file write only — deliberately no network code here.
+    Best-effort: a logging hiccup should never block the popup closing."""
+    try:
+        os.makedirs(os.path.dirname(ACK_LOG_PATH), exist_ok=True)
+        now = datetime.now()
+        timestamp = f"{now.strftime('%Y-%m-%d')} {now.strftime('%H%M')}"
+        line = f"User clicked OK button {timestamp} {store_code or ''} {store_name or ''}".rstrip()
+        with open(ACK_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+    except Exception:
+        pass
+
+
 def show_reminder_gui(sub_title, message, layout_type="standard",
                        s1_title=None, s1_sub=None, s1_body=None,
                        s2_title=None, s2_sub=None, s2_body=None,
-                       warning=None):
+                       warning=None, store_code=None, store_name=None):
     """Renders both Standard Cash Pick-Up and Rich E-Services UI Layouts dynamically.
 
     s1_*/s2_*/warning let the deployer override the step-checklist text per
@@ -252,6 +269,11 @@ def show_reminder_gui(sub_title, message, layout_type="standard",
             root.destroy()
         finally:
             pass
+
+    def ack_and_exit():
+        # Only fires on an explicit OK click, not on window-close (X).
+        log_ack_click(store_code, store_name)
+        safe_exit()
 
     root.protocol("WM_DELETE_WINDOW", safe_exit)
 
@@ -345,7 +367,7 @@ def show_reminder_gui(sub_title, message, layout_type="standard",
         ack_button = tk.Button(
             root, text="✔  OK, NAINTINDIHAN KO!", font=("Segoe UI", 9, "bold"),
             bg="#28A745", fg="white", activebackground="#218838", activeforeground="white",
-            padx=25, pady=5, bd=0, cursor="hand2", command=safe_exit
+            padx=25, pady=5, bd=0, cursor="hand2", command=ack_and_exit
         )
         ack_button.pack(pady=(0, 10))
 
@@ -390,7 +412,7 @@ def show_reminder_gui(sub_title, message, layout_type="standard",
         tk.Button(
             btn_frame, text="✔  OK, NAINTINDIHAN KO!", font=("Segoe UI", 9, "bold"),
             bg="#28A745", fg="white", activebackground="#218838", activeforeground="white",
-            padx=25, pady=5, bd=0, cursor="hand2", command=safe_exit
+            padx=25, pady=5, bd=0, cursor="hand2", command=ack_and_exit
         ).pack()
 
     try:
@@ -415,6 +437,8 @@ def main():
     parser.add_argument("--s2_sub", default=None, help="Step 2 subtitle override")
     parser.add_argument("--s2_body", default=None, help="Step 2 body text override")
     parser.add_argument("--warning", default=None, help="Bottom warning callout override")
+    parser.add_argument("--store_code", default=None, help="Store code, embedded in ack log lines")
+    parser.add_argument("--store_name", default=None, help="Store name, embedded in ack log lines")
     parser.add_argument("--init", action="store_true", help="Initialize Time Sync and Default Scheduler")
     args = parser.parse_args()
 
@@ -447,6 +471,8 @@ def main():
         s2_sub=args.s2_sub,
         s2_body=restore_pipes(args.s2_body),
         warning=restore_pipes(args.warning),
+        store_code=args.store_code,
+        store_name=args.store_name,
     )
 
 
