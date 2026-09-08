@@ -35,7 +35,7 @@ Get-ScheduledTask | Where-Object {$_.TaskName -like 'Reminder_v2_Shift_*'} | Unr
 
 # BASH COMBINE SCRIPT COMMMAND
  chmod +x combine_files.sh
-   ./combine_files.sh
+ ./combine_files.sh
 
 
 
