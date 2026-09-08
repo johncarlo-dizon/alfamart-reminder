@@ -4,6 +4,7 @@ import subprocess
 import argparse
 import winsound
 import ctypes
+import webbrowser
 import tkinter as tk
 from tkinter import ttk
 from datetime import datetime
@@ -228,8 +229,12 @@ class InstallationWindow:
     def finish_setup(self):
         self.root.destroy()
         # Sequence Preview Dialogs after setup button click
-        show_reminder_gui("6:00pm Reminder", "1. Proceed sa Cash Pick-Up!\n2. Laging isara ang storage door\n3. Siguraduhing naka-combination mode ang vault.", layout_type="standard")
-        show_reminder_gui("6:00 AM REMINDER!", "MAG LOG IN SA E-SERVICES.", layout_type="eservices_login")
+        show_reminder_gui("Sample Reminder", "1. Proceed sa Cash Pick-Up!\n2. Laging isara ang storage door\n3. Siguraduhing naka-combination mode ang vault.", layout_type="standard")
+        show_reminder_gui("Sample REMINDER!", "MAG LOG IN SA E-SERVICES.", layout_type="eservices_login")
+        show_reminder_gui(
+            "Sample Announcement", "This is a sample special reminder with a link button.",
+            layout_type="special", btn_name="VIEW DETAILS", btn_link="https://apps.atp.ph/"
+        )
 
 
 def log_ack_click(store_code="", store_name=""):
@@ -250,12 +255,17 @@ def log_ack_click(store_code="", store_name=""):
 def show_reminder_gui(sub_title, message, layout_type="standard",
                        s1_title=None, s1_sub=None, s1_body=None,
                        s2_title=None, s2_sub=None, s2_body=None,
-                       warning=None, store_code=None, store_name=None):
-    """Renders both Standard Cash Pick-Up and Rich E-Services UI Layouts dynamically.
+                       warning=None, btn_name=None, btn_link=None,
+                       store_code=None, store_name=None):
+    """Renders the Standard Cash Pick-Up, Rich E-Services, and Special
+    (link-button) UI Layouts dynamically.
 
     s1_*/s2_*/warning let the deployer override the step-checklist text per
     schedule entry. Any left as None fall back to the original hardcoded
     login/EOD copy so old-style --custom/--type calls still work unchanged.
+
+    btn_name/btn_link are only used by layout_type == "special": they label
+    a button that opens btn_link in the default browser when clicked.
     """
     root = tk.Tk()
     root.withdraw()
@@ -372,6 +382,67 @@ def show_reminder_gui(sub_title, message, layout_type="standard",
         ack_button.pack(pady=(0, 10))
 
     # ---------------------------------------------------------------------
+    # SPECIAL POPUP LAYOUT (TITLE + MESSAGE + LINK BUTTON + OK)
+    # ---------------------------------------------------------------------
+    elif layout_type == "special":
+        window_width = 560
+        window_height = 380
+        center_x = int((root.winfo_screenwidth() / 2) - (window_width / 2))
+        center_y = int((root.winfo_screenheight() / 2) - (window_height / 2))
+        root.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
+        root.resizable(False, False)
+
+        header_frame = tk.Frame(root, bg="#FFFFFF", pady=20)
+        header_frame.pack(fill="x")
+
+        tk.Label(
+            header_frame, text=sub_title.upper(), font=("Impact", 22),
+            fg="#0A2540", bg="#FFFFFF"
+        ).pack()
+
+        div_frame = tk.Frame(root, bg="#FFFFFF")
+        div_frame.pack(fill="x", padx=35)
+        tk.Frame(div_frame, bg="#666666", height=2).pack(fill="x", pady=(0, 15))
+
+        body_frame = tk.Frame(root, bg="#FFFFFF", padx=45, pady=6)
+        body_frame.pack(fill="both", expand=True)
+
+        tk.Label(
+            body_frame, text=message, font=("Segoe UI", 13),
+            fg="#1A1A1A", bg="#FFFFFF", justify="center", wraplength=460
+        ).pack(anchor="center", fill="both", expand=True)
+
+        # Link Button — opens btn_link in the default browser. It does NOT
+        # close the popup or count as an acknowledgement by itself; the
+        # operator still has to click "OK, NAINTINDIHAN KO!" below to close
+        # the reminder (and to record the ack log entry).
+        display_btn_name = (btn_name or "").strip() or "OPEN LINK"
+
+        def open_link():
+            link = (btn_link or "").strip()
+            if link:
+                try:
+                    webbrowser.open(link)
+                except Exception:
+                    pass
+
+        tk.Button(
+            root, text=f"🔗  {display_btn_name}", font=("Segoe UI", 9, "bold"),
+            bg="#0056B3", fg="white", activebackground="#00408a", activeforeground="white",
+            padx=25, pady=5, bd=0, cursor="hand2", command=open_link
+        ).pack(pady=(0, 8))
+
+        # Bottom Button Section
+        btn_frame = tk.Frame(root, bg="#FFFFFF", pady=10)
+        btn_frame.pack(fill="x")
+
+        tk.Button(
+            btn_frame, text="✔  OK, NAINTINDIHAN KO!", font=("Segoe UI", 9, "bold"),
+            bg="#28A745", fg="white", activebackground="#218838", activeforeground="white",
+            padx=25, pady=5, bd=0, cursor="hand2", command=ack_and_exit
+        ).pack()
+
+    # ---------------------------------------------------------------------
     # STANDARD POPUP LAYOUT (CASH PICK-UP)
     # ---------------------------------------------------------------------
     else:
@@ -437,6 +508,8 @@ def main():
     parser.add_argument("--s2_sub", default=None, help="Step 2 subtitle override")
     parser.add_argument("--s2_body", default=None, help="Step 2 body text override")
     parser.add_argument("--warning", default=None, help="Bottom warning callout override")
+    parser.add_argument("--btn_name", default=None, help="Link button label (layout type 'special')")
+    parser.add_argument("--btn_link", default=None, help="Link button URL (layout type 'special')")
     parser.add_argument("--store_code", default=None, help="Store code, embedded in ack log lines")
     parser.add_argument("--store_name", default=None, help="Store name, embedded in ack log lines")
     parser.add_argument("--init", action="store_true", help="Initialize Time Sync and Default Scheduler")
@@ -471,6 +544,8 @@ def main():
         s2_sub=args.s2_sub,
         s2_body=restore_pipes(args.s2_body),
         warning=restore_pipes(args.warning),
+        btn_name=args.btn_name,
+        btn_link=args.btn_link,
         store_code=args.store_code,
         store_name=args.store_name,
     )

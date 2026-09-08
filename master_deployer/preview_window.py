@@ -1,7 +1,9 @@
 import tkinter as tk
+from tkinter import messagebox
 
 
-def render_preview_modal(parent_root, sub_title, message, layout_type, s1_title, s1_sub, s1_body, s2_title, s2_sub, s2_body, warn_txt):
+def render_preview_modal(parent_root, sub_title, message, layout_type, s1_title, s1_sub, s1_body, s2_title, s2_sub, s2_body, warn_txt,
+                          btn_name=None, btn_link=None):
     preview_win = tk.Toplevel(parent_root)
     preview_win.title("LIVE PREVIEW — Alfamart Reminder")
     preview_win.configure(bg="#FFFFFF")
@@ -81,6 +83,56 @@ def render_preview_modal(parent_root, sub_title, message, layout_type, s1_title,
             preview_win, text="✔  OK, NAINTINDIHAN KO!", font=("Segoe UI", 8, "bold"),
             bg="#28A745", fg="white", padx=15, pady=3, bd=0, command=preview_win.destroy
         ).pack(pady=(0, 6))
+
+    elif layout_type == "special":
+        window_width = 480
+        window_height = 340
+        center_x = int((preview_win.winfo_screenwidth() / 2) - (window_width / 2))
+        center_y = int((preview_win.winfo_screenheight() / 2) - (window_height / 2))
+        preview_win.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
+        preview_win.resizable(False, False)
+
+        header_frame = tk.Frame(preview_win, bg="#FFFFFF", pady=20)
+        header_frame.pack(fill="x")
+
+        tk.Label(
+            header_frame, text=(sub_title or "REMINDER").upper(), font=("Impact", 20),
+            fg="#0A2540", bg="#FFFFFF"
+        ).pack()
+
+        div_frame = tk.Frame(preview_win, bg="#FFFFFF")
+        div_frame.pack(fill="x", padx=35)
+        tk.Frame(div_frame, bg="#666666", height=2).pack(fill="x", pady=(0, 12))
+
+        body_frame = tk.Frame(preview_win, bg="#FFFFFF", padx=40, pady=6)
+        body_frame.pack(fill="both", expand=True)
+
+        display_msg = message.strip() if message.strip() else "SAMPLE MESSAGE"
+        tk.Label(
+            body_frame, text=display_msg, font=("Segoe UI", 12),
+            fg="#1A1A1A", bg="#FFFFFF", justify="center", wraplength=400
+        ).pack(anchor="center", fill="both", expand=True)
+
+        display_btn_name = (btn_name or "").strip() or "LINK BUTTON"
+        display_btn_link = (btn_link or "").strip() or "(no link set)"
+
+        tk.Button(
+            preview_win, text=f"🔗  {display_btn_name}", font=("Segoe UI", 9, "bold"),
+            bg="#0056B3", fg="white", activebackground="#00408a", activeforeground="white",
+            padx=20, pady=4, bd=0, cursor="hand2",
+            # Preview-only: shows what will happen instead of actually opening
+            # a browser, since this is just a WYSIWYG mockup for the operator.
+            command=lambda: messagebox.showinfo(
+                "Preview — Link Button", f"This button will open:\n{display_btn_link}",
+                parent=preview_win
+            )
+        ).pack(pady=(4, 6))
+
+        tk.Button(
+            preview_win, text="✔  OK, NAINTINDIHAN KO!", font=("Segoe UI", 9, "bold"),
+            bg="#28A745", fg="white", activebackground="#218838", activeforeground="white",
+            padx=20, pady=4, bd=0, cursor="hand2", command=preview_win.destroy
+        ).pack(pady=(0, 10))
 
     else:
         window_width = 580

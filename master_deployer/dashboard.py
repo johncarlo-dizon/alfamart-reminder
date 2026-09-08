@@ -85,7 +85,7 @@ class MasterITDashboard:
         self.minute_spin.pack(side="left")
 
         tk.Label(row0, text="Layout Type:", bg="#f4f4f4", font=("Segoe UI", 8, "bold")).pack(side="left")
-        self.type_combo = ttk.Combobox(row0, values=["standard", "eservices_login", "eservices_eod"], width=15, state="readonly")
+        self.type_combo = ttk.Combobox(row0, values=["standard", "eservices_login", "eservices_eod", "special"], width=15, state="readonly")
         self.type_combo.pack(side="left", padx=5)
         self.type_combo.set("standard")
         self.type_combo.bind("<<ComboboxSelected>>", self.on_layout_change)
@@ -138,6 +138,22 @@ class MasterITDashboard:
         tk.Label(warn_frame, text="Bottom Warning Note:", bg="#f4f4f4", font=("Segoe UI", 7, "bold"), width=20, anchor="nw").pack(side="left")
         self.warning_text = tk.Text(warn_frame, height=2, font=("Segoe UI", 8))
         self.warning_text.pack(side="left", fill="x", expand=True)
+
+        # "special" layout fields: a single link button on the popup, in
+        # addition to the standard OK button.
+        self.special_frame = tk.LabelFrame(self.form_frame, text=" Dynamic Link Button Fields ", font=("Segoe UI", 8, "bold"), bg="#f4f4f4", padx=5, pady=2)
+
+        btn_name_frame = tk.Frame(self.special_frame, bg="#f4f4f4")
+        btn_name_frame.pack(fill="x", pady=1)
+        tk.Label(btn_name_frame, text="Button Name:", bg="#f4f4f4", font=("Segoe UI", 7, "bold"), width=20, anchor="w").pack(side="left")
+        self.btn_name_entry = tk.Entry(btn_name_frame, font=("Segoe UI", 8))
+        self.btn_name_entry.pack(side="left", fill="x", expand=True)
+
+        btn_link_frame = tk.Frame(self.special_frame, bg="#f4f4f4")
+        btn_link_frame.pack(fill="x", pady=1)
+        tk.Label(btn_link_frame, text="Button Link:", bg="#f4f4f4", font=("Segoe UI", 7, "bold"), width=20, anchor="w").pack(side="left")
+        self.btn_link_entry = tk.Entry(btn_link_frame, font=("Segoe UI", 8))
+        self.btn_link_entry.pack(side="left", fill="x", expand=True)
 
         edit_btn_frame = tk.Frame(self.form_frame, bg="#f4f4f4")
         edit_btn_frame.pack(fill="x", pady=(4, 0))
@@ -253,9 +269,21 @@ class MasterITDashboard:
     def on_layout_change(self, event=None):
         l_type = self.type_combo.get()
         is_dynamic = l_type in ["eservices_login", "eservices_eod"]
+        is_special = l_type == "special"
 
-        if not self.eservices_frame.winfo_ismapped():
-            self.eservices_frame.pack(fill="x", pady=(2, 0))
+        # The e-services checklist fields and the special link-button fields
+        # are mutually exclusive layouts, so only one of their frames is
+        # shown at a time.
+        if is_special:
+            if self.eservices_frame.winfo_ismapped():
+                self.eservices_frame.pack_forget()
+            if not self.special_frame.winfo_ismapped():
+                self.special_frame.pack(fill="x", pady=(2, 0))
+        else:
+            if self.special_frame.winfo_ismapped():
+                self.special_frame.pack_forget()
+            if not self.eservices_frame.winfo_ismapped():
+                self.eservices_frame.pack(fill="x", pady=(2, 0))
 
         self._set_dynamic_fields_state("normal")
 
@@ -290,6 +318,17 @@ class MasterITDashboard:
             self.warning_text.delete("1.0", tk.END)
 
         self._set_dynamic_fields_state("normal" if is_dynamic else "disabled")
+
+        # Button Name / Button Link are only relevant to the "special" layout.
+        self.btn_name_entry.config(state="normal" if is_special else "disabled")
+        self.btn_link_entry.config(state="normal" if is_special else "disabled")
+        if not is_special:
+            self.btn_name_entry.config(state="normal")
+            self.btn_name_entry.delete(0, tk.END)
+            self.btn_name_entry.config(state="disabled")
+            self.btn_link_entry.config(state="normal")
+            self.btn_link_entry.delete(0, tk.END)
+            self.btn_link_entry.config(state="disabled")
 
     @staticmethod
     def _validate_hour_keystroke(proposed):
@@ -345,7 +384,11 @@ class MasterITDashboard:
 
         warn = self.warning_text.get("1.0", tk.END).strip()
 
-        render_preview_modal(self.root, t, msg, l_type, s1_t, s1_s, s1_b, s2_t, s2_s, s2_b, warn)
+        btn_name = self.btn_name_entry.get().strip()
+        btn_link = self.btn_link_entry.get().strip()
+
+        render_preview_modal(self.root, t, msg, l_type, s1_t, s1_s, s1_b, s2_t, s2_s, s2_b, warn,
+                              btn_name=btn_name, btn_link=btn_link)
 
     def refresh_schedule_table(self):
         for item in self.sched_tree.get_children():
@@ -395,6 +438,18 @@ class MasterITDashboard:
 
         self.on_layout_change(event=None)
 
+        # Button Name/Link only apply to the "special" layout; on_layout_change
+        # already resets+disables them for other types, so only populate here
+        # when this schedule actually is one.
+        if s.get("type") == "special":
+            self.btn_name_entry.config(state="normal")
+            self.btn_name_entry.delete(0, tk.END)
+            self.btn_name_entry.insert(0, s.get("button_name", ""))
+
+            self.btn_link_entry.config(state="normal")
+            self.btn_link_entry.delete(0, tk.END)
+            self.btn_link_entry.insert(0, s.get("button_link", ""))
+
     def clear_form(self):
         self.selected_schedule_index = None
         self.sched_tree.selection_remove(self.sched_tree.selection())
@@ -430,16 +485,22 @@ class MasterITDashboard:
         s2_b = self.s2_body_text.get("1.0", tk.END).strip()
 
         warn = self.warning_text.get("1.0", tk.END).strip()
+        btn_name = self.btn_name_entry.get().strip()
+        btn_link = self.btn_link_entry.get().strip()
 
         if not t or not title or not lines:
             messagebox.showwarning("Input Error", "Time, Title, and Main Content are required.")
+            return
+
+        if l_type == "special" and (not btn_name or not btn_link):
+            messagebox.showwarning("Input Error", "Button Name and Button Link are required for the 'special' layout.")
             return
 
         self.schedules.append({
             "time": t, "title": title, "type": l_type, "lines": lines,
             "step1_title": s1_t, "step1_sub": s1_s, "step1_body": s1_b,
             "step2_title": s2_t, "step2_sub": s2_s, "step2_body": s2_b,
-            "warning": warn
+            "warning": warn, "button_name": btn_name, "button_link": btn_link
         })
         self.refresh_schedule_table()
         self.clear_form()
@@ -463,12 +524,18 @@ class MasterITDashboard:
         s2_b = self.s2_body_text.get("1.0", tk.END).strip()
 
         warn = self.warning_text.get("1.0", tk.END).strip()
+        btn_name = self.btn_name_entry.get().strip()
+        btn_link = self.btn_link_entry.get().strip()
+
+        if l_type == "special" and (not btn_name or not btn_link):
+            messagebox.showwarning("Input Error", "Button Name and Button Link are required for the 'special' layout.")
+            return
 
         self.schedules[self.selected_schedule_index] = {
             "time": t, "title": title, "type": l_type, "lines": lines,
             "step1_title": s1_t, "step1_sub": s1_s, "step1_body": s1_b,
             "step2_title": s2_t, "step2_sub": s2_s, "step2_body": s2_b,
-            "warning": warn
+            "warning": warn, "button_name": btn_name, "button_link": btn_link
         }
         self.refresh_schedule_table()
         self.clear_form()
@@ -734,6 +801,9 @@ class MasterITDashboard:
 
                 safe_warn = clean_warn.replace("'", "''").replace('"', '')
 
+                safe_btn_name = str(item.get("button_name", "")).replace("'", "''").replace('"', '')
+                safe_btn_link = str(item.get("button_link", "")).replace("'", "''").replace('"', '')
+
                 formatted_time = t_str.zfill(5)
                 task_id = formatted_time.replace(":", "")
                 task_name = f"Alfamart_Reminder_Shift_{task_id}"
@@ -745,6 +815,7 @@ class MasterITDashboard:
                     f'--s1_title "{safe_s1_t}" --s1_sub "{safe_s1_s}" --s1_body "{safe_s1_b}" '
                     f'--s2_title "{safe_s2_t}" --s2_sub "{safe_s2_s}" --s2_body "{safe_s2_b}" '
                     f'--warning "{safe_warn}" '
+                    f'--btn_name "{safe_btn_name}" --btn_link "{safe_btn_link}" '
                     f'--store_code "{safe_store_code}" --store_name "{safe_store_name}"'
                 )
 

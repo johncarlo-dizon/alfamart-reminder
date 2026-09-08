@@ -25,6 +25,7 @@ pyinstaller --noconsole --onefile --name "Master_Deployer" --clean --collect-all
 
 pyinstaller --noconsole --onefile --name "Alfamart_Reminder" --clean alfamart_reminder/main.py
 
+del /F /Q "C:\Windows\Temp\alfamart_reminder_initialized.flag"
 
 
 # LIST TASK SCHED 
