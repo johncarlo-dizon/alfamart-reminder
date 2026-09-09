@@ -237,7 +237,15 @@ class InstallationWindow:
         )
 
 
-def log_ack_click(store_code="", store_name=""):
+LAYOUT_TYPE_LABELS = {
+    "standard": "CASH PICKUP",
+    "eservices_login": "E-SERVICES LOGIN",
+    "eservices_eod": "E-SERVICES EOD",
+    "special": "SPECIAL",
+}
+
+
+def log_ack_click(store_code="", store_name="", layout_type=""):
     """Append one line to the local ack log next to the exe.
     Local file write only — deliberately no network code here.
     Best-effort: a logging hiccup should never block the popup closing."""
@@ -245,7 +253,8 @@ def log_ack_click(store_code="", store_name=""):
         os.makedirs(os.path.dirname(ACK_LOG_PATH), exist_ok=True)
         now = datetime.now()
         timestamp = f"{now.strftime('%Y-%m-%d')} {now.strftime('%H%M')}"
-        line = f"User clicked OK button {timestamp} {store_code or ''} {store_name or ''}".rstrip()
+        type_label = LAYOUT_TYPE_LABELS.get(layout_type, (layout_type or "UNKNOWN").upper())
+        line = f"User clicked OK button {timestamp} [{type_label}] {store_code or ''} {store_name or ''}".rstrip()
         with open(ACK_LOG_PATH, "a", encoding="utf-8") as f:
             f.write(line + "\n")
     except Exception:
@@ -282,7 +291,7 @@ def show_reminder_gui(sub_title, message, layout_type="standard",
 
     def ack_and_exit():
         # Only fires on an explicit OK click, not on window-close (X).
-        log_ack_click(store_code, store_name)
+        log_ack_click(store_code, store_name, layout_type)
         safe_exit()
 
     root.protocol("WM_DELETE_WINDOW", safe_exit)
