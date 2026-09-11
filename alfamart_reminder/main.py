@@ -95,6 +95,18 @@ def disable_close_button(root):
     except Exception:
         pass
 
+def add_header_banner(parent):
+    """Branded header strip shown at the top of every reminder popup,
+    above the layout-specific content. Must be packed first (side='top')
+    so it stays pinned above everything else in the window."""
+    banner = tk.Frame(parent, bg="#0A2540")
+    banner.pack(fill="x", side="top")
+    tk.Label(
+        banner, text="ALFAMART REMINDER", font=("Segoe UI", 10, "bold"),
+        fg="#FFFFFF", bg="#0A2540", pady=6, anchor="w"
+    ).pack(fill="x", padx=12)
+    return banner
+
 class InstallationWindow:
     def __init__(self):
         self.root = tk.Tk()
@@ -309,6 +321,7 @@ def show_reminder_gui(sub_title, message, layout_type="standard",
     root.title(WINDOW_HEADER_TITLE)
     root.configure(bg="#FFFFFF")
     root.attributes('-topmost', True)
+    root.overrideredirect(True)
 
     def ack_and_exit():
         log_ack_click(store_code, store_name, layout_type)
@@ -333,7 +346,7 @@ def show_reminder_gui(sub_title, message, layout_type="standard",
         root.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
         root.resizable(False, False)
 
-
+        add_header_banner(root) 
         # Bell Header Banner
         header_frame = tk.Frame(root, bg="#FFFFFF", pady=8)
         header_frame.pack(fill="x")
@@ -426,7 +439,7 @@ def show_reminder_gui(sub_title, message, layout_type="standard",
         center_y = int((root.winfo_screenheight() / 2) - (window_height / 2))
         root.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
         root.resizable(False, False)
-
+        add_header_banner(root) 
         header_frame = tk.Frame(root, bg="#FFFFFF", pady=20)
         header_frame.pack(fill="x")
 
@@ -487,7 +500,7 @@ def show_reminder_gui(sub_title, message, layout_type="standard",
         center_y = int((root.winfo_screenheight() / 2) - (window_height / 2))
         root.geometry(f"{window_width}x{window_height}+{center_x}+{center_y}")
         root.resizable(False, False)
-
+        add_header_banner(root) 
         # Header Section
         header_frame = tk.Frame(root, bg="#FFFFFF", pady=25)
         header_frame.pack(fill="x")
