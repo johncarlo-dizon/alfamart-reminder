@@ -68,6 +68,33 @@ def run_as_admin():
     sys.exit(0)
 
 
+def disable_close_button(root):
+    """Strips the title-bar system menu (X button + Alt+F4) so the
+    reminder can only be dismissed via the acknowledge button.
+    Best-effort — if the Win32 call fails, WM_DELETE_WINDOW below still
+    blocks the X as a fallback, it just won't be visually removed."""
+    try:
+        GWL_STYLE = -16
+        WS_SYSMENU = 0x00080000
+        SWP_NOMOVE = 0x0002
+        SWP_NOSIZE = 0x0001
+        SWP_NOZORDER = 0x0004
+        SWP_FRAMECHANGED = 0x0020
+
+        hwnd = ctypes.windll.user32.GetParent(root.winfo_id())
+        style = ctypes.windll.user32.GetWindowLongW(hwnd, GWL_STYLE)
+        ctypes.windll.user32.SetWindowLongW(hwnd, GWL_STYLE, style & ~WS_SYSMENU)
+
+        # Force Windows to redraw the title bar now that the style changed —
+        # without this, the X stays visible/hoverable even though it's
+        # already non-functional.
+        ctypes.windll.user32.SetWindowPos(
+            hwnd, 0, 0, 0, 0, 0,
+            SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED
+        )
+    except Exception:
+        pass
+
 class InstallationWindow:
     def __init__(self):
         self.root = tk.Tk()
@@ -283,18 +310,17 @@ def show_reminder_gui(sub_title, message, layout_type="standard",
     root.configure(bg="#FFFFFF")
     root.attributes('-topmost', True)
 
-    def safe_exit():
-        try:
-            root.destroy()
-        finally:
-            pass
-
     def ack_and_exit():
-        # Only fires on an explicit OK click, not on window-close (X).
         log_ack_click(store_code, store_name, layout_type)
-        safe_exit()
+        root.destroy()
 
-    root.protocol("WM_DELETE_WINDOW", safe_exit)
+    def block_close():
+        # X and Alt+F4 are disabled at the Win32 level (see
+        # disable_close_button below); this is just a fallback so the
+        # window can never be dismissed except via the acknowledge button.
+        pass
+
+    root.protocol("WM_DELETE_WINDOW", block_close)
 
     # ---------------------------------------------------------------------
     # RICH E-SERVICES POPUP LAYOUT
@@ -494,7 +520,6 @@ def show_reminder_gui(sub_title, message, layout_type="standard",
             bg="#28A745", fg="white", activebackground="#218838", activeforeground="white",
             padx=25, pady=5, bd=0, cursor="hand2", command=ack_and_exit
         ).pack()
-
     try:
         winsound.MessageBeep(winsound.MB_ICONINFORMATION)
     except Exception:
@@ -503,6 +528,8 @@ def show_reminder_gui(sub_title, message, layout_type="standard",
     root.deiconify()
     root.lift()
     root.focus_force()
+    root.update_idletasks()   # force the window to be fully realized first
+    disable_close_button(root)
     root.mainloop()
 
 

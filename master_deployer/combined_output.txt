@@ -164,6 +164,7 @@ class MasterITDashboard:
         self.log_queue = queue.Queue()
         self.failed_stores = []
         self.success_stores = []
+        self._build_checkbox_icons()
 
         main_container = tk.Frame(self.root, bg="#f4f4f4")
         main_container.pack(fill="both", expand=True, padx=10, pady=8)
@@ -174,20 +175,44 @@ class MasterITDashboard:
         table_frame = tk.Frame(master_frame, bg="#f4f4f4")
         table_frame.pack(side="left", fill="y", padx=(0, 8))
 
-        columns = ("Time", "Title", "Type")
-        self.sched_tree = ttk.Treeview(table_frame, columns=columns, show="headings", height=8)
-        self.sched_tree.heading("Time", text="Time")
-        self.sched_tree.heading("Title", text="Popup Title")
-        self.sched_tree.heading("Type", text="Layout")
-        self.sched_tree.column("Time", width=50)
-        self.sched_tree.column("Title", width=150)
-        self.sched_tree.column("Type", width=100)
-        self.sched_tree.pack(side="left", fill="y")
-        self.sched_tree.bind("<<TreeviewSelect>>", self.on_schedule_select)
+        # Action bar directly above the schedule list
+        task_action_row = tk.Frame(table_frame, bg="#f4f4f4")
+        task_action_row.pack(fill="x", pady=(0, 2))
 
-        sched_scroll = ttk.Scrollbar(table_frame, orient="vertical", command=self.sched_tree.yview)
-        self.sched_tree.configure(yscrollcommand=sched_scroll.set)
+        tk.Button(task_action_row, text="☑ Select All Tasks", font=("Segoe UI", 8), command=self.select_all_tasks).pack(side="left", padx=(0, 2))
+        tk.Button(task_action_row, text="☐ Deselect All Tasks", font=("Segoe UI", 8), command=self.deselect_all_tasks).pack(side="left", padx=2)
+
+        header_row = tk.Frame(table_frame, bg="#e9ecef")
+        header_row.pack(fill="x")
+        tk.Label(header_row, text="", width=3, bg="#e9ecef").pack(side="left")
+        tk.Label(header_row, text="Time", width=7, font=("Segoe UI", 8, "bold"), bg="#e9ecef", anchor="w").pack(side="left")
+        tk.Label(header_row, text="Popup Title", width=20, font=("Segoe UI", 8, "bold"), bg="#e9ecef", anchor="w").pack(side="left")
+        tk.Label(header_row, text="Layout", width=12, font=("Segoe UI", 8, "bold"), bg="#e9ecef", anchor="w").pack(side="left")
+
+        sched_list_container = tk.Frame(table_frame, bg="#ffffff", highlightthickness=1, highlightbackground="#ccc")
+        sched_list_container.pack(fill="both", expand=True)
+
+        sched_canvas = tk.Canvas(sched_list_container, bg="#ffffff", height=180, highlightthickness=0)
+        sched_scroll = ttk.Scrollbar(sched_list_container, orient="vertical", command=sched_canvas.yview)
+        sched_scrollable = tk.Frame(sched_canvas, bg="#ffffff")
+
+        self.sched_canvas = sched_canvas
+        self.sched_canvas_window = sched_canvas.create_window((0, 0), window=sched_scrollable, anchor="nw")
+
+        def _on_sched_scrollable_configure(event):
+            sched_canvas.configure(scrollregion=sched_canvas.bbox("all"))
+
+        def _on_sched_canvas_configure(event):
+            sched_canvas.itemconfig(self.sched_canvas_window, width=event.width)
+
+        sched_scrollable.bind("<Configure>", _on_sched_scrollable_configure)
+        sched_canvas.bind("<Configure>", _on_sched_canvas_configure)
+        sched_canvas.configure(yscrollcommand=sched_scroll.set)
+
+        sched_canvas.pack(side="left", fill="both", expand=True)
         sched_scroll.pack(side="right", fill="y")
+        self.sched_list_frame = sched_scrollable
+        self.sched_vars = {}
 
         self.form_frame = tk.Frame(master_frame, bg="#f4f4f4")
         self.form_frame.pack(side="right", fill="both", expand=True)
@@ -385,6 +410,37 @@ class MasterITDashboard:
         self.populate_store_checkboxes()
         self.on_layout_change()
 
+    def _build_checkbox_icons(self):
+        """Draws small square checkbox icons (matching the app's green
+        accent) for the schedule tree's tree-column, so task selection
+        looks like an actual checkbox instead of a plain text glyph —
+        consistent with the native tk.Checkbutton style used for store
+        selection below."""
+        size = 15
+        border_off = "#999999"
+        border_on = "#28A745"
+        fill = "#FFFFFF"
+        check_color = "#28A745"
+
+        unchecked = tk.PhotoImage(width=size, height=size)
+        checked = tk.PhotoImage(width=size, height=size)
+
+        for img, border in ((unchecked, border_off), (checked, border_on)):
+            for x in range(size):
+                for y in range(size):
+                    if x in (0, size - 1) or y in (0, size - 1):
+                        img.put(border, (x, y))
+                    else:
+                        img.put(fill, (x, y))
+
+        check_pixels = [(3, 7), (4, 8), (5, 9), (6, 8), (7, 7), (8, 6), (9, 5), (10, 4)]
+        for x, y in check_pixels:
+            checked.put(check_color, (x, y))
+            checked.put(check_color, (x, y + 1))
+
+        self.icon_task_checked = checked
+        self.icon_task_unchecked = unchecked
+
     # --- AUTO-POPULATE TEMPLATE ON DROPDOWN CHANGE ---
     def _set_dynamic_fields_state(self, state):
         entries = (self.s1_title_entry, self.s1_sub_entry, self.s2_title_entry, self.s2_sub_entry)
@@ -526,19 +582,66 @@ class MasterITDashboard:
                               btn_name=btn_name, btn_link=btn_link)
 
     def refresh_schedule_table(self):
-        for item in self.sched_tree.get_children():
-            self.sched_tree.delete(item)
+        for widget in self.sched_list_frame.winfo_children():
+            widget.destroy()
+        self.sched_vars = {}
+
         self.schedules.sort(key=lambda x: x["time"])
-        for idx, s in enumerate(self.schedules):
-            self.sched_tree.insert("", tk.END, iid=idx, values=(s["time"], s["title"], s.get("type", "standard")))
         save_schedules(self.schedules)
 
-    def on_schedule_select(self, event):
-        selected = self.sched_tree.selection()
-        if not selected:
-            return
-        idx = int(selected[0])
+        for idx, s in enumerate(self.schedules):
+            row_bg = "#DCEEFB" if idx == self.selected_schedule_index else "#ffffff"
+            row = tk.Frame(self.sched_list_frame, bg=row_bg)
+            row.pack(fill="x")
+
+            var = tk.BooleanVar(value=s.get("enabled", True))
+            self.sched_vars[idx] = var
+
+            def make_toggle(i=idx, v=var):
+                def toggle():
+                    self.schedules[i]["enabled"] = v.get()
+                return toggle
+
+            tk.Checkbutton(
+                row, variable=var, bg=row_bg, activebackground=row_bg,
+                command=make_toggle()
+            ).pack(side="left", padx=(4, 0))
+
+            time_lbl = tk.Label(row, text=s["time"], width=7, bg=row_bg, anchor="w", font=("Segoe UI", 8))
+            time_lbl.pack(side="left")
+            title_lbl = tk.Label(row, text=s["title"], width=20, bg=row_bg, anchor="w", font=("Segoe UI", 8))
+            title_lbl.pack(side="left")
+            type_lbl = tk.Label(row, text=s.get("type", "standard"), width=12, bg=row_bg, anchor="w", font=("Segoe UI", 8))
+            type_lbl.pack(side="left")
+
+            def make_select(i=idx):
+                def select(event=None):
+                    self.on_schedule_row_click(i)
+                return select
+
+            row_click = make_select()
+            for widget in (row, time_lbl, title_lbl, type_lbl):
+                widget.bind("<Button-1>", row_click)
+
+        self.sched_list_frame.update_idletasks()
+        self.sched_canvas.configure(scrollregion=self.sched_canvas.bbox("all"))
+
+    def on_schedule_row_click(self, idx):
         self.selected_schedule_index = idx
+        self._load_schedule_into_form(idx)
+        self.refresh_schedule_table()
+
+    def select_all_tasks(self):
+        for s in self.schedules:
+            s["enabled"] = True
+        self.refresh_schedule_table()
+
+    def deselect_all_tasks(self):
+        for s in self.schedules:
+            s["enabled"] = False
+        self.refresh_schedule_table()
+
+    def _load_schedule_into_form(self, idx):
         s = self.schedules[idx]
 
         self.set_time_value(s["time"])
@@ -587,7 +690,7 @@ class MasterITDashboard:
 
     def clear_form(self):
         self.selected_schedule_index = None
-        self.sched_tree.selection_remove(self.sched_tree.selection())
+        self.refresh_schedule_table()
         self.set_time_value("00:00")
         self.title_entry.delete(0, tk.END)
         self.type_combo.set("standard")
@@ -635,7 +738,8 @@ class MasterITDashboard:
             "time": t, "title": title, "type": l_type, "lines": lines,
             "step1_title": s1_t, "step1_sub": s1_s, "step1_body": s1_b,
             "step2_title": s2_t, "step2_sub": s2_s, "step2_body": s2_b,
-            "warning": warn, "button_name": btn_name, "button_link": btn_link
+            "warning": warn, "button_name": btn_name, "button_link": btn_link,
+            "enabled": True
         })
         self.refresh_schedule_table()
         self.clear_form()
@@ -666,11 +770,13 @@ class MasterITDashboard:
             messagebox.showwarning("Input Error", "Button Name and Button Link are required for the 'special' layout.")
             return
 
+        existing_enabled = self.schedules[self.selected_schedule_index].get("enabled", True)
         self.schedules[self.selected_schedule_index] = {
             "time": t, "title": title, "type": l_type, "lines": lines,
             "step1_title": s1_t, "step1_sub": s1_s, "step1_body": s1_b,
             "step2_title": s2_t, "step2_sub": s2_s, "step2_body": s2_b,
-            "warning": warn, "button_name": btn_name, "button_link": btn_link
+            "warning": warn, "button_name": btn_name, "button_link": btn_link,
+            "enabled": existing_enabled
         }
         self.refresh_schedule_table()
         self.clear_form()
@@ -825,7 +931,12 @@ class MasterITDashboard:
             messagebox.showwarning("Schedule Error", "Your Master Schedule Library is empty. Add tasks first.")
             return
 
-        if not messagebox.askyesno("Confirm Clean Update", f"This will CLEAR ALL existing reminder tasks on {len(selected_stores)} store PC(s) and install the {len(self.schedules)} master tasks.\n\nProceed?"):
+        tasks_to_deploy = [s for s in self.schedules if s.get("enabled", True)]
+        if not tasks_to_deploy:
+            messagebox.showwarning("Task Selection Error", "Please check at least one task in the Master Schedule Library to deploy.")
+            return
+
+        if not messagebox.askyesno("Confirm Clean Update", f"This will CLEAR ALL existing reminder tasks on {len(selected_stores)} store PC(s) and install the {len(tasks_to_deploy)} checked task(s).\n\nProceed?"):
             return
 
         self.failed_stores = []
@@ -911,8 +1022,8 @@ class MasterITDashboard:
             detail("Wiped old scheduled tasks.")
 
             success_count = 0
-            total = len(self.schedules)
-            for i, item in enumerate(self.schedules):
+            total = len(tasks_to_deploy)
+            for i, item in enumerate(tasks_to_deploy):
                 t_str = item["time"]
                 title = item["title"]
                 l_type = item.get("type", "standard")
